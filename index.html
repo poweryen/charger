@@ -98,6 +98,18 @@
     <div class="row"><span class="name">本月充電總量</span><span class="value" id="monthEnergy">0.0 kWh</span></div>
     <div class="row"><span class="name">本月充電總電費</span><span class="value highlight" id="monthCost">0.0 元</span></div>
   </div>
+  <!-- 歷史充電紀錄明細卡片 -->
+  <div class="card" style="margin-top: 16px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <span style="font-weight: 600; font-size: 16px;">📋 歷史充電帳單</span>
+      <span style="font-size: 12px; color: var(--text-sub);" id="history-count">0 筆紀錄</span>
+    </div>
+    <div id="history-list" style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="text-align: center; color: var(--text-sub); font-size: 13px; padding: 12px 0;">
+        讀取歷史紀錄中...
+      </div>
+    </div>
+  </div>
 
   <div class="footer">
     <span class="pulse"></span>雲端即時同步中 • <span id="updateTime">-</span>
@@ -148,6 +160,50 @@
 
     syncData();
     setInterval(syncData, 3000); // 每 3 秒自動輪詢刷新
+  // 抓取 Firebase 歷史充電帳單
+async function loadHistory() {
+  try {
+    const res = await fetch('https://ha-charger-default-rtdb.firebaseio.com/history.json');
+    const data = await res.json();
+    const listEl = document.getElementById('history-list');
+    const countEl = document.getElementById('history-count');
+    
+    if (!data) {
+      listEl.innerHTML = '<div style="text-align:center; color:var(--text-sub); font-size:13px; padding:12px 0;">尚無歷史充電紀錄</div>';
+      if (countEl) countEl.innerText = '0 筆紀錄';
+      return;
+    }
+
+    // 將工單轉為陣列，最新的排在最上方
+    const records = Object.values(data).reverse();
+    if (countEl) countEl.innerText = `${records.length} 筆紀錄`;
+
+    listEl.innerHTML = records.map(item => `
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-family: monospace; font-size: 12px; color: var(--text-sub);">${item.order_id || '工單'}</span>
+          <span style="font-size: 12px; padding: 2px 8px; border-radius: 6px; background: rgba(34, 197, 94, 0.15); color: var(--accent); font-weight: 600;">
+            ${item.vehicle || '電動車'}
+          </span>
+        </div>
+        <div style="font-size: 12px; color: var(--text-sub); margin-bottom: 8px;">
+          ${item.start_end || item.created_at || '--'}
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border); padding-top: 8px; font-size: 13px;">
+          <div><span style="color: var(--text-sub);">電量: </span><b>${item.energy !== undefined ? item.energy + ' kWh' : '--'}</b></div>
+          <div><span style="color: var(--text-sub);">時長: </span><b>${item.duration || '--'}</b></div>
+          <div style="color: var(--warning); font-weight: 700; font-size: 14px;">NT$ ${item.cost !== undefined ? item.cost : '--'}</div>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    console.error('讀取歷史紀錄失敗:', err);
+  }
+}
+
+// 頁面載入時執行
+loadHistory();
+
   </script>
 </body>
 </html>
