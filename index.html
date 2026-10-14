@@ -30,15 +30,11 @@
     .banner { font-size: 14px; color: var(--text-sub); display: flex; align-items: center; justify-content: space-between; }
     .banner b { color: #38bdf8; font-weight: 600; }
 
-    /* 雙半圓儀表區 */
+    /* HA 原生質感雙儀表盤 */
     .gauges { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
-    .gauge-card { background: var(--card-bg); border-radius: 18px; padding: 16px 12px 14px; text-align: center; border: 1px solid var(--border); }
-    .gauge-card .label { font-size: 13px; color: var(--text-sub); margin-bottom: 8px; }
-    .gauge-wrapper { position: relative; width: 130px; height: 68px; margin: 0 auto; overflow: hidden; }
-    .gauge-bg, .gauge-bar { width: 130px; height: 130px; border-radius: 50%; border: 12px solid #27272a; border-bottom-color: transparent; border-left-color: transparent; box-sizing: border-box; position: absolute; top: 0; left: 0; transform: rotate(-135deg); }
-    .gauge-bar { border-top-color: var(--accent); border-right-color: var(--accent); transition: transform 0.8s ease-out; }
-    .gauge-val { font-size: 24px; font-weight: 800; margin-top: 6px; letter-spacing: -0.5px; }
-    .gauge-unit { font-size: 13px; color: var(--text-sub); font-weight: 500; }
+    .gauge-card { background: var(--card-bg); border-radius: 18px; padding: 14px 10px 12px; text-align: center; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .gauge-card svg { width: 100%; max-width: 165px; overflow: visible; }
+    .gauge-card .label { font-size: 13px; color: var(--text-sub); margin-top: 6px; font-weight: 500; }
 
     /* 清單列表 */
     .list-title { font-size: 14px; font-weight: 600; color: #a1a1aa; margin-bottom: 12px; }
@@ -64,146 +60,55 @@
     <b id="scheduleText">載入中...</b>
   </div>
 
+  <!-- HA 原生質感雙儀表盤：即時充電功率與即時充電電流 -->
   <div class="gauges">
+    <!-- 功率儀表 -->
     <div class="gauge-card">
-      <div class="label">即時功率</div>
-      <div class="gauge-wrapper">
-        <div class="gauge-bg"></div>
-        <div class="gauge-bar" id="powerBar"></div>
-      </div>
-      <div class="gauge-val" id="powerVal">0.00 <span class="gauge-unit">kW</span></div>
+      <svg viewBox="0 0 200 120">
+        <defs>
+          <linearGradient id="gaugePowerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#22c55e" />
+            <stop offset="50%" stop-color="#22c55e" />
+            <stop offset="72%" stop-color="#eab308" />
+            <stop offset="92%" stop-color="#ef4444" />
+          </linearGradient>
+        </defs>
+        <!-- 灰色底軌 -->
+        <path d="M 25 105 A 75 75 0 0 1 175 105" fill="none" stroke="#27272a" stroke-width="16" stroke-linecap="round" />
+        <!-- 彩色漸層弧 -->
+        <path d="M 25 105 A 75 75 0 0 1 175 105" fill="none" stroke="url(#gaugePowerGrad)" stroke-width="16" stroke-linecap="round" opacity="0.95" />
+        <!-- 指針（置於文字後方，維持最佳閱讀性） -->
+        <g id="needlePower" style="transform-origin: 100px 105px; transform: rotate(-90deg); transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);">
+          <polygon points="98.5,105 101.5,105 100,34" fill="#f8fafc" />
+          <circle cx="100" cy="105" r="6" fill="#f59e0b" stroke="#1c1d22" stroke-width="2" />
+        </g>
+        <!-- 數值顯示 -->
+        <text id="powerVal" x="100" y="94" text-anchor="middle" font-size="21" font-weight="700" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, sans-serif">
+          0.00 <tspan font-size="12" font-weight="500" fill="#9ca3af">kW</tspan>
+        </text>
+      </svg>
+      <div class="label">即時充電功率</div>
     </div>
+
+    <!-- 電流儀表 -->
     <div class="gauge-card">
-      <div class="label">即時電流</div>
-      <div class="gauge-wrapper">
-        <div class="gauge-bg"></div>
-        <div class="gauge-bar" id="currentBar"></div>
-      </div>
-      <div class="gauge-val" id="currentVal">0.00 <span class="gauge-unit">A</span></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="list-title">本次充電工作數據</div>
-    <div class="row"><span class="name">本次充電車輛</span><span class="value" id="vehicleName">-</span></div>
-    <div class="row"><span class="name">本次充電時段</span><span class="value" id="sessionTime">-</span></div>
-    <div class="row"><span class="name">本次充電時長</span><span class="value" id="sessionDuration">-</span></div>
-    <div class="row"><span class="name">本次充入電量</span><span class="value" id="sessionEnergy">0.00 kWh</span></div>
-    <div class="row"><span class="name">當前台電費率</span><span class="value" id="rateVal">- 元/度</span></div>
-    <div class="row"><span class="name">本次充電費用</span><span class="value highlight" id="sessionCost">0.0 元</span></div>
-  </div>
-
-  <div class="card">
-    <div class="list-title">📅 當月累計充電統計</div>
-    <div class="row"><span class="name">本月充電總量</span><span class="value" id="monthEnergy">0.0 kWh</span></div>
-    <div class="row"><span class="name">本月充電總電費</span><span class="value highlight" id="monthCost">0.0 元</span></div>
-  </div>
-  <!-- 歷史充電紀錄明細卡片 -->
-  <div class="card" style="margin-top: 16px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-      <span style="font-weight: 600; font-size: 16px;">📋 歷史充電帳單</span>
-      <span style="font-size: 12px; color: var(--text-sub);" id="history-count">0 筆紀錄</span>
-    </div>
-    <div id="history-list" style="display: flex; flex-direction: column; gap: 10px;">
-      <div style="text-align: center; color: var(--text-sub); font-size: 13px; padding: 12px 0;">
-        讀取歷史紀錄中...
-      </div>
-    </div>
-  </div>
-
-  <div class="footer">
-    <span class="pulse"></span>雲端即時同步中 • <span id="updateTime">-</span>
-  </div>
-
-  <script>
-    const FIREBASE_URL = "https://ha-charger-default-rtdb.firebaseio.com/charger.json";
-
-    async function syncData() {
-      try {
-        const res = await fetch(FIREBASE_URL);
-        const data = await res.json();
-        if (!data) return;
-
-        // 狀態與排程
-        const isCharging = (data.status === 'Charging' || data.power > 0.1);
-        const badge = document.getElementById('statusBadge');
-        badge.innerText = isCharging ? '⚡ 充電中' : (data.status === 'Available' ? '待命中' : data.status);
-        badge.className = isCharging ? 'status-badge charging' : 'status-badge';
-        document.getElementById('scheduleText').innerText = data.schedule || '全日離峰';
-
-        // 即時數值
-        const power = parseFloat(data.power || 0);
-        const current = parseFloat(data.current || 0);
-        document.getElementById('powerVal').innerHTML = `${power.toFixed(2)} <span class="gauge-unit">kW</span>`;
-        document.getElementById('currentVal').innerHTML = `${current.toFixed(2)} <span class="gauge-unit">A</span>`;
-
-        // 儀表動畫角度 (滿刻度 5kW / 20A)
-        const powerDeg = Math.min((power / 5) * 180, 180) - 135;
-        const currentDeg = Math.min((current / 20) * 180, 180) - 135;
-        document.getElementById('powerBar').style.transform = `rotate(${powerDeg}deg)`;
-        document.getElementById('currentBar').style.transform = `rotate(${currentDeg}deg)`;
-
-        // 清單數據
-        document.getElementById('vehicleName').innerText = data.vehicle || '-';
-        document.getElementById('sessionTime').innerText = data.session_time || '待機中';
-        document.getElementById('sessionDuration').innerText = data.session_duration || '待機中';
-        document.getElementById('sessionEnergy').innerText = `${parseFloat(data.session_energy || 0).toFixed(2)} kWh`;
-        document.getElementById('rateVal').innerText = `${data.rate || 0} 元/度`;
-        document.getElementById('sessionCost').innerText = `${parseFloat(data.session_cost || 0).toFixed(1)} 元`;
-        document.getElementById('monthEnergy').innerText = `${parseFloat(data.month_energy || 0).toFixed(1)} kWh`;
-        document.getElementById('monthCost').innerText = `${parseFloat(data.month_cost || 0).toFixed(1)} 元`;
-        document.getElementById('updateTime').innerText = data.updated_at || '';
-      } catch (err) {
-        console.error("同步失敗:", err);
-      }
-    }
-
-    syncData();
-    setInterval(syncData, 3000); // 每 3 秒自動輪詢刷新
-  // 抓取 Firebase 歷史充電帳單
-async function loadHistory() {
-  try {
-    const res = await fetch('https://ha-charger-default-rtdb.firebaseio.com/history.json');
-    const data = await res.json();
-    const listEl = document.getElementById('history-list');
-    const countEl = document.getElementById('history-count');
-    
-    if (!data) {
-      listEl.innerHTML = '<div style="text-align:center; color:var(--text-sub); font-size:13px; padding:12px 0;">尚無歷史充電紀錄</div>';
-      if (countEl) countEl.innerText = '0 筆紀錄';
-      return;
-    }
-
-    // 將工單轉為陣列，最新的排在最上方
-    const records = Object.values(data).reverse();
-    if (countEl) countEl.innerText = `${records.length} 筆紀錄`;
-
-    listEl.innerHTML = records.map(item => `
-      <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <span style="font-family: monospace; font-size: 12px; color: var(--text-sub);">${item.order_id || '工單'}</span>
-          <span style="font-size: 12px; padding: 2px 8px; border-radius: 6px; background: rgba(34, 197, 94, 0.15); color: var(--accent); font-weight: 600;">
-            ${item.vehicle || '電動車'}
-          </span>
-        </div>
-        <div style="font-size: 12px; color: var(--text-sub); margin-bottom: 8px;">
-          ${item.start_end || item.created_at || '--'}
-        </div>
-        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border); padding-top: 8px; font-size: 13px;">
-          <div><span style="color: var(--text-sub);">電量: </span><b>${item.energy !== undefined ? item.energy + ' kWh' : '--'}</b></div>
-          <div><span style="color: var(--text-sub);">時長: </span><b>${item.duration || '--'}</b></div>
-          <div style="color: var(--warning); font-weight: 700; font-size: 14px;">NT$ ${item.cost !== undefined ? item.cost : '--'}</div>
-        </div>
-      </div>
-    `).join('');
-  } catch (err) {
-    console.error('讀取歷史紀錄失敗:', err);
-  }
-}
-
-// 頁面載入時執行
-loadHistory();
-
-  </script>
-</body>
-</html>
+      <svg viewBox="0 0 200 120">
+        <defs>
+          <linearGradient id="gaugeCurrentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#22c55e" />
+            <stop offset="50%" stop-color="#22c55e" />
+            <stop offset="75%" stop-color="#eab308" />
+            <stop offset="95%" stop-color="#ef4444" />
+          </linearGradient>
+        </defs>
+        <!-- 灰色底軌 -->
+        <path d="M 25 105 A 75 75 0 0 1 175 105" fill="none" stroke="#27272a" stroke-width="16" stroke-linecap="round" />
+        <!-- 彩色漸層弧 -->
+        <path d="M 25 105 A 75 75 0 0 1 175 105" fill="none" stroke="url(#gaugeCurrentGrad)" stroke-width="16" stroke-linecap="round" opacity="0.95" />
+        <!-- 指針 -->
+        <g id="needleCurrent" style="transform-origin: 100px 105px; transform: rotate(-90deg); transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);">
+          <polygon points="98.5,105 101.5,105 100,34" fill="#f8fafc" />
+          <circle cx="100" cy="105" r="6" fill="#f59e0b" stroke="#1c1d22" stroke-width="2" />
+        </g>
+        <!-- 數值顯示 -->
+        <text id="currentVal" x="100" y="94" text-anchor="middle" font-size="21" font-weight="700" fill="#ffffff" font-family="-apple-system, BlinkMac
