@@ -317,11 +317,11 @@
         // 更新電價燈號與離峰倒數
         updateTouStatus(data.rate, schedStr);
 
-        // 即時數值與 HA 風格儀表板動態指針（滿刻度設為 7kW / 32A）
+        // 即時數值與 HA 風格儀表板動態指針（配合 20A 斷路器，滿刻度設為 4.5kW / 20A）
         const power = parseFloat(data.power || 0);
         const current = parseFloat(data.current || 0);
-        updateGauge('needlePower', 'powerVal', power, 7, 'kW');
-        updateGauge('needleCurrent', 'currentVal', current, 32, 'A');
+        updateGauge('needlePower', 'powerVal', power, 4.5, 'kW');
+        updateGauge('needleCurrent', 'currentVal', current, 20, 'A');
 
         // 本次充電車輛（套用雙車款專屬配色標籤）
         const vName = data.vehicle || '-';
