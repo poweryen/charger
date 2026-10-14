@@ -55,13 +55,22 @@
     .highlight { color: #f59e0b !important; }
     .save-badge { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); padding: 3px 10px; border-radius: 10px; font-size: 13px; font-weight: 700; }
 
+    /* 雙車款專屬配色標籤 */
+    .car-badge { font-size: 12px; padding: 2px 8px; border-radius: 6px; font-weight: 600; display: inline-block; }
+    .car-bria { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+    .car-n7 { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+    .car-default { background: rgba(161, 161, 170, 0.15); color: #d4d4d8; border: 1px solid rgba(161, 161, 170, 0.3); }
+
     /* 歷史帳單篩選與摺疊按鈕 */
     .filter-select { background: #27272a; color: var(--text-main); border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; font-size: 12px; font-weight: 500; outline: none; }
     .toggle-btn { width: 100%; margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px; color: var(--text-sub); font-size: 13px; font-weight: 600; cursor: pointer; text-align: center; transition: background 0.2s; }
     .toggle-btn:active { background: rgba(255,255,255,0.08); }
 
-    .footer { text-align: center; font-size: 12px; color: #52525b; margin-top: 20px; }
-    .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-right: 6px; animation: blink 2s infinite; }
+    /* 底部同步狀態與斷線警示燈號 */
+    .footer { text-align: center; font-size: 12px; color: #71717a; margin-top: 20px; display: flex; justify-content: center; align-items: center; gap: 6px; }
+    .footer.stale { color: #fbbf24; }
+    .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: blink 2s infinite; }
+    .pulse.stale { background: #f59e0b; animation: blink 1s infinite; }
     @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
   </style>
 </head>
@@ -183,8 +192,9 @@
     </button>
   </div>
 
-  <div class="footer">
-    <span class="pulse"></span>雲端即時同步中 • <span id="updateTime">-</span>
+  <div class="footer" id="footerBar">
+    <span class="pulse" id="syncPulse"></span>
+    <span id="syncStatusText">雲端即時同步中</span> • <span id="updateTime">-</span>
   </div>
 
   <script>
@@ -194,6 +204,47 @@
     let allHistoryRecords = [];
     let isHistoryExpanded = false;
     const HISTORY_LIMIT = 5;
+
+    // 依車款名稱回傳對應的配色標籤 Class（Bria 翡翠綠 vs. n7 科技藍）
+    function getVehicleBadgeClass(vehicleName) {
+      const v = (vehicleName || '').toLowerCase();
+      if (v.includes('n7') || v.includes('luxgen')) return 'car-badge car-n7';
+      if (v.includes('bria') || v.includes('foxtron')) return 'car-badge car-bria';
+      return 'car-badge car-default';
+    }
+
+    // 檢查雲端同步時間是否超過 10 分鐘未更新
+    function updateSyncHealth(updatedAtStr, isError = false) {
+      const footerEl = document.getElementById('footerBar');
+      const pulseEl = document.getElementById('syncPulse');
+      const textEl = document.getElementById('syncStatusText');
+      const timeEl = document.getElementById('updateTime');
+
+      if (isError) {
+        footerEl.className = 'footer stale';
+        pulseEl.className = 'pulse stale';
+        textEl.innerText = '⚠️ 網路連線異常';
+        return;
+      }
+
+      timeEl.innerText = updatedAtStr || '-';
+      if (!updatedAtStr) return;
+
+      // 將 YYYY-MM-DD 轉為 YYYY/MM/DD 確保 iOS Safari 正確解析時間
+      const parsedTime = new Date(updatedAtStr.replace(/-/g, '/'));
+      if (isNaN(parsedTime.getTime())) return;
+
+      const diffMins = Math.floor((Date.now() - parsedTime.getTime()) / 60000);
+      if (diffMins >= 10) {
+        footerEl.className = 'footer stale';
+        pulseEl.className = 'pulse stale';
+        textEl.innerText = `訊號未更新 (已逾 ${diffMins} 分鐘)`;
+      } else {
+        footerEl.className = 'footer';
+        pulseEl.className = 'pulse';
+        textEl.innerText = '雲端即時同步中';
+      }
+    }
 
     // 計算指針旋轉角度（-90deg 代表 0，+90deg 代表滿刻度）
     function updateGauge(needleId, valTextId, value, maxVal, unit) {
@@ -217,7 +268,7 @@
       const badgeEl = document.getElementById('touBadge');
       const countdownEl = document.getElementById('touCountdown');
       const now = new Date();
-      const day = now.getDay(); // 0: 週日, 6: 週六
+      const day = now.getDay();
       const curMins = now.getHours() * 60 + now.getMinutes();
       const isWeekend = (day === 0 || day === 6 || (scheduleStr && scheduleStr.includes('全日')));
       const numRate = parseFloat(rate || 0);
@@ -272,8 +323,14 @@
         updateGauge('needlePower', 'powerVal', power, 7, 'kW');
         updateGauge('needleCurrent', 'currentVal', current, 32, 'A');
 
-        // 清單數據
-        document.getElementById('vehicleName').innerText = data.vehicle || '-';
+        // 本次充電車輛（套用雙車款專屬配色標籤）
+        const vName = data.vehicle || '-';
+        const vEl = document.getElementById('vehicleName');
+        if (vName !== '-') {
+          vEl.innerHTML = `<span class="${getVehicleBadgeClass(vName)}">${vName}</span>`;
+        } else {
+          vEl.innerText = '-';
+        }
 
         // 時段格式化：分兩排向右對齊
         const rawTime = data.session_time || '';
@@ -314,9 +371,12 @@
         document.getElementById('monthKm').innerText = `約 +${monthKm} km`;
         document.getElementById('gasCost').innerText = `約 NT$ ${gasCost} 元`;
         document.getElementById('savedMoney').innerText = `💰 淨省 NT$ ${savedMoney} 元`;
-        document.getElementById('updateTime').innerText = data.updated_at || '';
+
+        // 檢查同步時效與更新狀態燈
+        updateSyncHealth(data.updated_at, false);
       } catch (err) {
         console.error("同步失敗:", err);
+        updateSyncHealth(null, true);
       }
     }
 
@@ -350,12 +410,14 @@
 
       const visibleRecords = isHistoryExpanded ? filtered : filtered.slice(0, HISTORY_LIMIT);
 
-      listEl.innerHTML = visibleRecords.map(item => `
+      listEl.innerHTML = visibleRecords.map(item => {
+        const carName = item.vehicle || '電動車';
+        return `
         <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
             <span style="font-family: monospace; font-size: 12px; color: var(--text-sub);">${item.order_id || '工單'}</span>
-            <span style="font-size: 12px; padding: 2px 8px; border-radius: 6px; background: rgba(34, 197, 94, 0.15); color: var(--accent); font-weight: 600;">
-              ${item.vehicle || '電動車'}
+            <span class="${getVehicleBadgeClass(carName)}">
+              ${carName}
             </span>
           </div>
           <div style="font-size: 12px; color: var(--text-sub); margin-bottom: 8px;">
@@ -367,7 +429,7 @@
             <div style="color: var(--warning); font-weight: 700; font-size: 14px;">NT$ ${item.cost !== undefined ? Number(item.cost).toFixed(1) : '--'}</div>
           </div>
         </div>
-      `).join('');
+      `}).join('');
 
       if (filtered.length > HISTORY_LIMIT) {
         toggleBtn.style.display = 'block';
