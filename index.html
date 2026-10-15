@@ -54,6 +54,7 @@
     .row .value { font-weight: 600; color: var(--text-main); text-align: right; }
     .highlight { color: #f59e0b !important; }
     .save-badge { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); padding: 3px 10px; border-radius: 10px; font-size: 13px; font-weight: 700; }
+    .save-badge-dc { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); padding: 3px 10px; border-radius: 10px; font-size: 13px; font-weight: 700; }
 
     /* 雙車款專屬配色標籤 */
     .car-badge { font-size: 12px; padding: 2px 8px; border-radius: 6px; font-weight: 600; display: inline-block; }
@@ -71,7 +72,7 @@
     .split-item { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 8px 10px; }
     .split-item.bria { border-left: 3px solid #22c55e; }
     .split-item.n7 { border-left: 3px solid #38bdf8; }
-    .split-car-title { white-space: nowrap; font-size: 11px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .split-car-title { font-size: 11px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; white-space: nowrap; }
     .split-stat-line { font-size: 12px; color: var(--text-sub); display: flex; justify-content: space-between; align-items: center; margin-top: 3px; }
     .split-stat-line b { font-size: 13px; color: var(--text-main); }
 
@@ -183,6 +184,7 @@
     <div class="row"><span class="name">本月充電總電費</span><span class="value highlight" id="monthCost">0.0 元</span></div>
     <div class="row"><span class="name">本月累計補充續航<span class="sub-note">(6 km/度)</span></span><span class="value" id="monthKm" style="color: #38bdf8;">約 +0 km</span></div>
     <div class="row"><span class="name">同里程燃油車油資<span class="sub-note">(12.5 km/L)</span></span><span class="value" id="gasCost" style="color: var(--text-sub);">約 NT$ 0 元</span></div>
+    <div class="row"><span class="name">本月相比超充省下<span class="sub-note">(6.5 元/度)</span></span><span class="save-badge-dc" id="savedDcMoney">⚡ 淨省 NT$ 0 元</span></div>
     <div class="row"><span class="name">本月相比油車省下</span><span class="save-badge" id="savedMoney">💰 淨省 NT$ 0 元</span></div>
   </div>
 
@@ -413,9 +415,11 @@
         const monthEnergy = monthEnergyRaw > 0 ? monthEnergyRaw : sessionEnergy;
         const monthCost = parseFloat(data.month_cost || 0);
 
-        // 續航與省油錢換算（6 km/度，油車 12.5 km/L、95無鉛 30元/L）
+        // 續航、超充價差與省油錢換算（6 km/度，超充 6.5 元/度，油車 12.5 km/L、95無鉛 30元/L）
         const sessionKm = Math.round(sessionEnergy * 6.0);
         const monthKm = Math.round(monthEnergy * 6.0);
+        const dcCost = Math.round(monthEnergy * 6.5);
+        const savedDcMoney = Math.max(0, Math.round(dcCost - monthCost));
         const gasCost = Math.round((monthKm / 12.5) * 30);
         const savedMoney = Math.max(0, Math.round(gasCost - monthCost));
 
@@ -429,6 +433,7 @@
         document.getElementById('monthCost').innerText = `${monthCost.toFixed(1)} 元`;
         document.getElementById('monthKm').innerText = `約 +${monthKm} km`;
         document.getElementById('gasCost').innerText = `約 NT$ ${gasCost} 元`;
+        document.getElementById('savedDcMoney').innerText = `⚡ 淨省 NT$ ${savedDcMoney} 元`;
         document.getElementById('savedMoney').innerText = `💰 淨省 NT$ ${savedMoney} 元`;
 
         // 檢查同步時效與更新狀態燈
