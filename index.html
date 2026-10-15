@@ -43,12 +43,14 @@
     .pin-modal { background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; padding: 22px 20px; width: 100%; max-width: 310px; text-align: center; box-shadow: 0 12px 32px rgba(0,0,0,0.6); }
     .pin-modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
     .pin-modal p { font-size: 12.5px; color: var(--text-sub); margin-bottom: 16px; line-height: 1.4; }
-    .pin-input { width: 100%; background: #121316; border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-size: 24px; font-weight: 700; color: var(--text-main); text-align: center; letter-spacing: 10px; outline: none; margin-bottom: 10px; }
+    .pin-input { width: 100%; background: #121316; border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-size: 24px; font-weight: 700; color: var(--text-main); text-align: center; letter-spacing: 10px; outline: none; margin-bottom: 10px; transition: opacity 0.2s; }
     .pin-input:focus { border-color: #38bdf8; }
+    .pin-input:disabled { opacity: 0.4; cursor: not-allowed; }
     .pin-error { font-size: 12px; color: var(--danger); min-height: 18px; margin-bottom: 10px; font-weight: 600; }
     .pin-modal-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .pin-modal-btn { padding: 10px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: #27272a; color: var(--text-sub); }
     .pin-modal-btn.confirm { background: #38bdf8; color: #0f172a; border-color: #38bdf8; font-weight: 700; }
+    .pin-modal-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
     .card { background: var(--card-bg); border-radius: 18px; padding: 16px; margin-bottom: 14px; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
     
@@ -152,7 +154,7 @@
     </div>
   </div>
 
-  <!-- 屋主 PIN 碼驗證彈窗 -->
+  <!-- 屋主 PIN 碼驗證彈窗（含 3次30秒 / 6次3分鐘 階梯式防暴力破解鎖定） -->
   <div class="pin-modal-overlay" id="pinModalOverlay">
     <div class="pin-modal">
       <h3>🔐 屋主身分驗證</h3>
@@ -161,7 +163,7 @@
       <div class="pin-error" id="pinError"></div>
       <div class="pin-modal-btns">
         <button class="pin-modal-btn" onclick="closePinModal()">取消</button>
-        <button class="pin-modal-btn confirm" onclick="verifyPin()">確認解鎖</button>
+        <button class="pin-modal-btn confirm" id="pinConfirmBtn" onclick="verifyPin()">確認解鎖</button>
       </div>
     </div>
   </div>
@@ -350,10 +352,13 @@
   <script>
     const OWNER_PIN = "9133";
     const STORAGE_KEY = "charger_owner_auth_v1";
+    const ATTEMPTS_KEY = "charger_pin_attempts_v1";
+    const LOCK_UNTIL_KEY = "charger_pin_lock_until_v1";
     const FIREBASE_URL = "https://ha-charger-default-rtdb.firebaseio.com/charger.json";
     const HISTORY_URL = "https://ha-charger-default-rtdb.firebaseio.com/history.json";
 
     let isOwnerAuthenticated = false;
+    let lockCountdownTimer = null;
     let demoScenarioIndex = 0;
     let allHistoryRecords = [];
     let isHistoryExpanded = false;
@@ -452,6 +457,8 @@
       const params = new URLSearchParams(window.location.search);
       if (params.get('key') === OWNER_PIN) {
         localStorage.setItem(STORAGE_KEY, OWNER_PIN);
+        localStorage.removeItem(ATTEMPTS_KEY);
+        localStorage.removeItem(LOCK_UNTIL_KEY);
         window.history.replaceState({}, document.title, window.location.pathname);
       }
       isOwnerAuthenticated = (localStorage.getItem(STORAGE_KEY) === OWNER_PIN);
@@ -470,6 +477,44 @@
       }
     }
 
+    // 檢查並更新 PIN 碼鎖定倒數狀態（3次鎖30秒、6次鎖3分鐘、9次以上鎖15分鐘）
+    function checkPinLockState() {
+      const input = document.getElementById('pinInput');
+      const confirmBtn = document.getElementById('pinConfirmBtn');
+      const err = document.getElementById('pinError');
+      const lockUntil = parseInt(localStorage.getItem(LOCK_UNTIL_KEY) || '0', 10);
+      const now = Date.now();
+
+      if (lockUntil > now) {
+        const remSec = Math.ceil((lockUntil - now) / 1000);
+        input.disabled = true;
+        confirmBtn.disabled = true;
+        const mins = Math.floor(remSec / 60);
+        const secs = remSec % 60;
+        const timeStr = mins > 0 ? `${mins} 分 ${secs} 秒` : `${secs} 秒`;
+        err.innerText = `🔒 錯誤次數過多，請於 ${timeStr} 後再試`;
+        return true;
+      } else {
+        if (input.disabled) {
+          input.disabled = false;
+          confirmBtn.disabled = false;
+          err.innerText = '';
+          input.focus();
+        }
+        if (lockCountdownTimer) {
+          clearInterval(lockCountdownTimer);
+          lockCountdownTimer = null;
+        }
+        return false;
+      }
+    }
+
+    function startLockCountdown() {
+      if (lockCountdownTimer) clearInterval(lockCountdownTimer);
+      checkPinLockState();
+      lockCountdownTimer = setInterval(checkPinLockState, 1000);
+    }
+
     function openPinModal() {
       const overlay = document.getElementById('pinModalOverlay');
       const input = document.getElementById('pinInput');
@@ -477,14 +522,23 @@
       err.innerText = '';
       input.value = '';
       overlay.classList.add('show');
-      setTimeout(() => input.focus(), 100);
+      if (!checkPinLockState()) {
+        setTimeout(() => input.focus(), 100);
+      } else {
+        startLockCountdown();
+      }
     }
 
     function closePinModal() {
+      if (lockCountdownTimer) {
+        clearInterval(lockCountdownTimer);
+        lockCountdownTimer = null;
+      }
       document.getElementById('pinModalOverlay').classList.remove('show');
     }
 
     function onPinInput(val) {
+      if (checkPinLockState()) return;
       document.getElementById('pinError').innerText = '';
       if (val.length === 4) {
         verifyPin();
@@ -492,17 +546,38 @@
     }
 
     function verifyPin() {
-      const val = document.getElementById('pinInput').value.trim();
+      if (checkPinLockState()) return;
+
+      const input = document.getElementById('pinInput');
+      const err = document.getElementById('pinError');
+      const val = input.value.trim();
+
       if (val === OWNER_PIN) {
         localStorage.setItem(STORAGE_KEY, OWNER_PIN);
+        localStorage.removeItem(ATTEMPTS_KEY);
+        localStorage.removeItem(LOCK_UNTIL_KEY);
         isOwnerAuthenticated = true;
         closePinModal();
         updateModeUI();
         syncData();
         loadHistory();
       } else {
-        document.getElementById('pinError').innerText = '❌ 通行碼錯誤，請重新輸入';
-        document.getElementById('pinInput').value = '';
+        const attempts = parseInt(localStorage.getItem(ATTEMPTS_KEY) || '0', 10) + 1;
+        localStorage.setItem(ATTEMPTS_KEY, String(attempts));
+        input.value = '';
+
+        // 每滿 3 次觸發階梯式鎖定：3次 -> 30秒、6次 -> 180秒(3分鐘)、9次以上 -> 900秒(15分鐘)
+        if (attempts % 3 === 0) {
+          let lockSec = 30;
+          if (attempts === 6) lockSec = 180;
+          else if (attempts >= 9) lockSec = 900;
+
+          localStorage.setItem(LOCK_UNTIL_KEY, String(Date.now() + lockSec * 1000));
+          startLockCountdown();
+        } else {
+          const remTries = 3 - (attempts % 3);
+          err.innerText = `❌ 通行碼錯誤 (還可嘗試 ${remTries} 次)`;
+        }
       }
     }
 
