@@ -183,8 +183,9 @@
     <div class="row"><span class="name">本月充電總量</span><span class="value" id="monthEnergy">0.0 kWh</span></div>
     <div class="row"><span class="name">本月充電總電費</span><span class="value highlight" id="monthCost">0.0 元</span></div>
     <div class="row"><span class="name">本月累計補充續航<span class="sub-note">(6 km/度)</span></span><span class="value" id="monthKm" style="color: #38bdf8;">約 +0 km</span></div>
+    <div class="row"><span class="name">同度數超充站電費<span class="sub-note">(6.5 元/度)</span></span><span class="value" id="dcCost" style="color: var(--text-sub);">約 NT$ 0 元</span></div>
     <div class="row"><span class="name">同里程燃油車油資<span class="sub-note">(12.5 km/L)</span></span><span class="value" id="gasCost" style="color: var(--text-sub);">約 NT$ 0 元</span></div>
-    <div class="row"><span class="name">本月相比超充省下<span class="sub-note">(6.5 元/度)</span></span><span class="save-badge-dc" id="savedDcMoney">⚡ 淨省 NT$ 0 元</span></div>
+    <div class="row"><span class="name">本月相比超充省下</span><span class="save-badge-dc" id="savedDcMoney">⚡ 淨省 NT$ 0 元</span></div>
     <div class="row"><span class="name">本月相比油車省下</span><span class="save-badge" id="savedMoney">💰 淨省 NT$ 0 元</span></div>
   </div>
 
@@ -432,6 +433,7 @@
         document.getElementById('monthEnergy').innerText = `${monthEnergy.toFixed(1)} kWh`;
         document.getElementById('monthCost').innerText = `${monthCost.toFixed(1)} 元`;
         document.getElementById('monthKm').innerText = `約 +${monthKm} km`;
+        document.getElementById('dcCost').innerText = `約 NT$ ${dcCost} 元`;
         document.getElementById('gasCost').innerText = `約 NT$ ${gasCost} 元`;
         document.getElementById('savedDcMoney').innerText = `⚡ 淨省 NT$ ${savedDcMoney} 元`;
         document.getElementById('savedMoney').innerText = `💰 淨省 NT$ ${savedMoney} 元`;
