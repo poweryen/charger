@@ -359,7 +359,7 @@
     let isHistoryExpanded = false;
     const HISTORY_LIMIT = 5;
 
-    // 4 種訪客互動展示情境
+    // 4 種訪客互動展示情境（整月模擬：雙車每日各 40km = 月跑 2400km / 總用電 400.0 kWh / 全離峰 796.0 元）
     const DEMO_SCENARIOS = [
       {
         label: "🔵 n7 離峰充電中",
@@ -369,27 +369,27 @@
         baseCurrent: 15.50,
         rate: 1.99,
         schedule: "00:00 ~ 06:00、11:00 ~ 14:00",
-        session_time: "2026/10/15 00:00:05 ~ 充電中",
-        session_duration: "3 小時 18 分",
-        session_energy: 11.62,
-        session_cost: 23.1,
-        month_energy: 168.5,
-        month_cost: 345.4
+        session_time: "2026/10/30 00:00:04 ~ 充電中",
+        session_duration: "3 小時 25 分",
+        session_energy: 12.04,
+        session_cost: 24.0,
+        month_energy: 400.0,
+        month_cost: 796.0
       },
       {
         label: "🟢 Bria 離峰充電中",
         vehicle: "Foxtron Bria",
         status: "Charging",
-        basePower: 3.48,
-        baseCurrent: 15.32,
+        basePower: 3.49,
+        baseCurrent: 15.36,
         rate: 1.99,
         schedule: "00:00 ~ 06:00、11:00 ~ 14:00",
-        session_time: "2026/10/15 11:00:04 ~ 充電中",
-        session_duration: "1 小時 42 分",
-        session_energy: 5.92,
-        session_cost: 11.8,
-        month_energy: 168.5,
-        month_cost: 345.4
+        session_time: "2026/10/30 11:00:03 ~ 充電中",
+        session_duration: "2 小時 10 分",
+        session_energy: 7.56,
+        session_cost: 15.0,
+        month_energy: 400.0,
+        month_cost: 796.0
       },
       {
         label: "🔌 尖峰插槍等待排程",
@@ -403,8 +403,8 @@
         session_duration: "等待排程中",
         session_energy: 0.00,
         session_cost: 0.0,
-        month_energy: 168.5,
-        month_cost: 345.4
+        month_energy: 400.0,
+        month_cost: 796.0
       },
       {
         label: "🅿️ 未插槍斷電上鎖",
@@ -414,23 +414,37 @@
         baseCurrent: 0.00,
         rate: 1.99,
         schedule: "00:00 ~ 06:00、11:00 ~ 14:00",
-        session_time: "2026/10/14 00:00:05 ~ 2026/10/14 05:40:12",
-        session_duration: "5 小時 40 分 7 秒",
-        session_energy: 19.85,
-        session_cost: 39.5,
-        month_energy: 168.5,
-        month_cost: 345.4
+        session_time: "2026/10/30 00:00:04 ~ 2026/10/30 05:38:12",
+        session_duration: "5 小時 38 分 8 秒",
+        session_energy: 19.80,
+        session_cost: 39.4,
+        month_energy: 400.0,
+        month_cost: 796.0
       }
     ];
 
-    // 訪客展示專用範例歷史帳單
+    // 訪客展示專用整月歷史帳單（共 20 筆全離峰紀錄：Bria 10 筆共 199.0 kWh / NT$ 396.0、n7 10 筆共 201.0 kWh / NT$ 400.0）
     const DEMO_HISTORY = [
-      { order_id: "DEMO-20261014", vehicle: "Foxtron Bria", start_end: "2026/10/14 00:00:05 ~ 2026/10/14 05:40:12", duration: "5 小時 40 分 7 秒", energy: 19.85, cost: 39.5 },
-      { order_id: "DEMO-20261012", vehicle: "Luxgen n7", start_end: "2026/10/12 00:00:04 ~ 2026/10/12 06:00:00", duration: "5 小時 59 分 56 秒", energy: 21.10, cost: 42.0 },
-      { order_id: "DEMO-20261009", vehicle: "Luxgen n7", start_end: "2026/10/09 11:00:03 ~ 2026/10/09 14:00:00", duration: "2 小時 59 分 57 秒", energy: 10.45, cost: 20.8 },
-      { order_id: "DEMO-20261006", vehicle: "Foxtron Bria", start_end: "2026/10/06 00:00:05 ~ 2026/10/06 05:15:20", duration: "5 小時 15 分 15 秒", energy: 18.30, cost: 36.4 },
-      { order_id: "DEMO-20260928", vehicle: "Luxgen n7", start_end: "2026/09/28 00:00:04 ~ 2026/09/28 06:00:00", duration: "5 小時 59 分 56 秒", energy: 20.90, cost: 43.1 },
-      { order_id: "DEMO-20260922", vehicle: "Foxtron Bria", start_end: "2026/09/22 00:00:06 ~ 2026/09/22 04:50:10", duration: "4 小時 50 分 4 秒", energy: 16.80, cost: 34.6 }
+      { order_id: "DEMO-20261030", vehicle: "Foxtron Bria", start_end: "2026/10/30 00:00:04 ~ 2026/10/30 05:38:12", duration: "5 小時 38 分 8 秒", energy: 19.80, cost: 39.4 },
+      { order_id: "DEMO-20261028", vehicle: "Luxgen n7", start_end: "2026/10/28 00:00:05 ~ 2026/10/28 05:36:23", duration: "5 小時 36 分 18 秒", energy: 19.70, cost: 39.2 },
+      { order_id: "DEMO-20261027", vehicle: "Foxtron Bria", start_end: "2026/10/27 00:00:03 ~ 2026/10/27 05:34:48", duration: "5 小時 34 分 45 秒", energy: 19.60, cost: 39.0 },
+      { order_id: "DEMO-20261025", vehicle: "Luxgen n7", start_end: "2026/10/25 00:00:06 ~ 2026/10/25 05:46:31", duration: "5 小時 46 分 25 秒", energy: 20.30, cost: 40.4 },
+      { order_id: "DEMO-20261024", vehicle: "Foxtron Bria", start_end: "2026/10/24 00:00:04 ~ 2026/10/24 05:46:22", duration: "5 小時 46 分 18 秒", energy: 20.30, cost: 40.4 },
+      { order_id: "DEMO-20261022", vehicle: "Luxgen n7", start_end: "2026/10/22 00:00:05 ~ 2026/10/22 05:34:35", duration: "5 小時 34 分 30 秒", energy: 19.60, cost: 39.0 },
+      { order_id: "DEMO-20261021", vehicle: "Foxtron Bria", start_end: "2026/10/21 00:00:04 ~ 2026/10/21 05:36:26", duration: "5 小時 36 分 22 秒", energy: 19.70, cost: 39.2 },
+      { order_id: "DEMO-20261019", vehicle: "Luxgen n7", start_end: "2026/10/19 00:00:03 ~ 2026/10/19 05:51:45", duration: "5 小時 51 分 42 秒", energy: 20.60, cost: 41.0 },
+      { order_id: "DEMO-20261018", vehicle: "Foxtron Bria", start_end: "2026/10/18 00:00:05 ~ 2026/10/18 05:43:15", duration: "5 小時 43 分 10 秒", energy: 20.10, cost: 40.0 },
+      { order_id: "DEMO-20261016", vehicle: "Luxgen n7", start_end: "2026/10/16 00:00:04 ~ 2026/10/16 05:41:19", duration: "5 小時 41 分 15 秒", energy: 20.00, cost: 39.8 },
+      { order_id: "DEMO-20261015", vehicle: "Foxtron Bria", start_end: "2026/10/15 00:00:06 ~ 2026/10/15 05:32:56", duration: "5 小時 32 分 50 秒", energy: 19.50, cost: 38.8 },
+      { order_id: "DEMO-20261013", vehicle: "Luxgen n7", start_end: "2026/10/13 00:00:04 ~ 2026/10/13 05:44:52", duration: "5 小時 44 分 48 秒", energy: 20.20, cost: 40.2 },
+      { order_id: "DEMO-20261011", vehicle: "Foxtron Bria", start_end: "2026/10/11 00:00:05 ~ 2026/10/11 05:51:35", duration: "5 小時 51 分 30 秒", energy: 20.60, cost: 41.0 },
+      { order_id: "DEMO-20261010", vehicle: "Luxgen n7", start_end: "2026/10/10 00:00:03 ~ 2026/10/10 05:31:08", duration: "5 小時 31 分 5 秒", energy: 19.40, cost: 38.6 },
+      { order_id: "DEMO-20261008", vehicle: "Foxtron Bria", start_end: "2026/10/08 00:00:04 ~ 2026/10/08 05:27:44", duration: "5 小時 27 分 40 秒", energy: 19.20, cost: 38.2 },
+      { order_id: "DEMO-20261007", vehicle: "Luxgen n7", start_end: "2026/10/07 00:00:05 ~ 2026/10/07 05:55:15", duration: "5 小時 55 分 10 秒", energy: 20.80, cost: 41.4 },
+      { order_id: "DEMO-20261005", vehicle: "Foxtron Bria", start_end: "2026/10/05 00:00:04 ~ 2026/10/05 05:48:09", duration: "5 小時 48 分 5 秒", energy: 20.40, cost: 40.6 },
+      { order_id: "DEMO-20261004", vehicle: "Luxgen n7", start_end: "2026/10/04 00:00:06 ~ 2026/10/04 05:39:41", duration: "5 小時 39 分 35 秒", energy: 19.90, cost: 39.6 },
+      { order_id: "DEMO-20261002", vehicle: "Foxtron Bria", start_end: "2026/10/02 00:00:03 ~ 2026/10/02 05:38:15", duration: "5 小時 38 分 12 秒", energy: 19.80, cost: 39.4 },
+      { order_id: "DEMO-20261001", vehicle: "Luxgen n7", start_end: "2026/10/01 00:00:05 ~ 2026/10/01 05:49:55", duration: "5 小時 49 分 50 秒", energy: 20.50, cost: 40.8 }
     ];
 
     // 初始化權限檢查（支援網址 ?key=9133 自動解鎖並抹除網址參數）
@@ -494,7 +508,6 @@
 
     function onFooterModeSwitch() {
       if (isOwnerAuthenticated) {
-        // 屋主主動切換預覽展示模式
         localStorage.removeItem(STORAGE_KEY);
         isOwnerAuthenticated = false;
         updateModeUI();
@@ -863,7 +876,6 @@
       a.download = `車位充電帳單_${suffix}.csv`;
       document.body.appendChild(a);
       a.click();
-      document.body.appendChild(a);
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
@@ -981,7 +993,7 @@
       }
     }
 
-    // 抓取歷史充電帳單（展示模式載入範例帳單，屋主模式讀取真實 Firebase）
+    // 抓取歷史充電帳單（展示模式載入 20 筆整月範例帳單，屋主模式讀取真實 Firebase）
     async function loadHistory() {
       if (!isOwnerAuthenticated) {
         allHistoryRecords = [...DEMO_HISTORY];
