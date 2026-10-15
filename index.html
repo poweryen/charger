@@ -46,7 +46,7 @@
     .flow-node.active-amber { border-color: rgba(245, 158, 11, 0.45); background: rgba(245, 158, 11, 0.06); }
     .flow-node.active-blue { border-color: rgba(56, 189, 248, 0.45); background: rgba(56, 189, 248, 0.06); }
     .flow-title { font-size: 11px; font-weight: 700; color: var(--text-main); white-space: nowrap; margin-bottom: 3px; }
-    .flow-sub { font-size: 10px; color: var(--text-sub); white-space: nowrap; font-weight: 500; }
+    .flow-sub { font-size: 10px; color: var(--text-sub); white-space: nowrap; font-weight: 600; }
     .flow-line { flex: 1; height: 2px; background: repeating-linear-gradient(to right, #3f3f46 0, #3f3f46 4px, transparent 4px, transparent 8px); position: relative; margin: 0 4px; overflow: hidden; border-radius: 2px; }
     .flow-line.standby { background: repeating-linear-gradient(to right, #38bdf8 0, #38bdf8 4px, transparent 4px, transparent 8px); opacity: 0.5; }
     .flow-line.charging { background: rgba(34, 197, 94, 0.25); height: 3px; }
@@ -93,9 +93,9 @@
     .split-stat-line b { font-size: 13px; color: var(--text-main); }
 
     /* 歷史帳單篩選、匯出與摺疊按鈕 */
-    .filter-group { display: flex; gap: 6px; align-items: center; }
-    .filter-select { background: #27272a; color: var(--text-main); border: 1px solid var(--border); border-radius: 8px; padding: 4px 6px; font-size: 12px; font-weight: 500; outline: none; }
-    .csv-btn { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 4px 8px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .filter-group { display: flex; gap: 4px; align-items: center; }
+    .filter-select { background: #27272a; color: var(--text-main); border: 1px solid var(--border); border-radius: 8px; padding: 4px 5px; font-size: 11.5px; font-weight: 500; outline: none; }
+    .csv-btn { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 4px 7px; font-size: 11.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
     .csv-btn:active { opacity: 0.7; }
     .toggle-btn { width: 100%; margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px; color: var(--text-sub); font-size: 13px; font-weight: 600; cursor: pointer; text-align: center; transition: background 0.2s; }
     .toggle-btn:active { background: rgba(255,255,255,0.08); }
@@ -138,11 +138,11 @@
     <div class="flow-line" id="flowLine1"></div>
     <div class="flow-node" id="flowEvseNode">
       <div class="flow-title">⚡ 16A 充電樁</div>
-      <div class="flow-sub" id="flowEvseSub">🔒 斷電上鎖</div>
+      <div class="flow-sub" id="flowEvseSub">🔒 斷電上鎖待命</div>
     </div>
     <div class="flow-line" id="flowLine2"></div>
     <div class="flow-node" id="flowCarNode">
-      <div class="flow-title" id="flowCarTitle">🚗 設定車輛</div>
+      <div class="flow-title" id="flowCarTitle">🚗 車輛</div>
       <div class="flow-sub" id="flowCarSub">🅿️ 未插槍待命</div>
     </div>
   </div>
@@ -231,10 +231,10 @@
 
   <!-- 歷史充電紀錄明細卡片 -->
   <div class="card" style="margin-top: 16px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
-      <div style="display: flex; align-items: baseline; gap: 6px;">
-        <span style="font-weight: 600; font-size: 16px;">📋 歷史充電帳單</span>
-        <span style="font-size: 12px; color: var(--text-sub);" id="history-count">0 筆紀錄</span>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 4px; margin-bottom: 12px;">
+      <div style="display: flex; align-items: baseline; gap: 4px; white-space: nowrap;">
+        <span style="font-weight: 600; font-size: 15px;">📋 歷史充電帳單</span>
+        <span style="font-size: 11px; color: var(--text-sub);" id="history-count">0 筆</span>
       </div>
       <div class="filter-group">
         <select id="carFilter" class="filter-select" onchange="onFilterChange()">
@@ -400,23 +400,26 @@
         evseSub.innerText = '🔒 斷電上鎖待命';
       }
 
-      // 3. 右節點：充電車輛與插槍狀態
+      // 3. 右節點：上方固定為「🚗 車輛」，下方依狀態顯示「未插槍待命」或「車型」
       const carNode = document.getElementById('flowCarNode');
       const carTitle = document.getElementById('flowCarTitle');
       const carSub = document.getElementById('flowCarSub');
       const isN7 = getVehicleType(vehicleName) === 'n7';
-      const displayCar = (vehicleName && vehicleName !== '-') ? vehicleName : '未指定車輛';
-      carTitle.innerText = isN7 ? `🔵 ${displayCar}` : `🟢 ${displayCar}`;
+      const displayCar = (vehicleName && vehicleName !== '-') ? vehicleName : '電動車';
+      carTitle.innerText = '🚗 車輛';
 
       if (isCharging) {
         carNode.className = isN7 ? 'flow-node active-blue' : 'flow-node active-green';
-        carSub.innerText = '⚡ 充電進電中';
+        carSub.innerText = isN7 ? `🔵 ${displayCar}` : `🟢 ${displayCar}`;
+        carSub.style.color = isN7 ? '#38bdf8' : '#4ade80';
       } else if (isPluggedWaiting) {
         carNode.className = isN7 ? 'flow-node active-blue' : 'flow-node active-green';
-        carSub.innerText = '🔌 已插槍待命';
+        carSub.innerText = `🔌 ${displayCar}`;
+        carSub.style.color = isN7 ? '#38bdf8' : '#4ade80';
       } else {
         carNode.className = 'flow-node';
         carSub.innerText = '🅿️ 未插槍待命';
+        carSub.style.color = 'var(--text-sub)';
       }
 
       // 4. 連接線動態光點
@@ -544,7 +547,7 @@
         const sessionKm = Math.round(sessionEnergy * 6.0);
         const monthKm = Math.round(monthEnergy * 6.0);
         const avgRate = monthEnergy > 0 ? (monthCost / monthEnergy) : 0;
-        const equivLiters = monthCost / 30.0; // 181.2元相當於買幾公升 30元/L 的汽油
+        const equivLiters = monthCost / 30.0;
         const equivKmL = (equivLiters > 0 && monthKm > 0) ? (monthKm / equivLiters) : 0;
 
         const dcCost = Math.round(monthEnergy * 6.5);
@@ -627,6 +630,7 @@
       a.download = `車位充電帳單_${suffix}.csv`;
       document.body.appendChild(a);
       a.click();
+      document.body.appendChild(a);
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
@@ -677,12 +681,12 @@
 
       if (!allHistoryRecords.length) {
         listEl.innerHTML = '<div style="text-align:center; color:var(--text-sub); font-size:13px; padding:12px 0;">尚無歷史充電紀錄</div>';
-        if (countEl) countEl.innerText = '0 筆紀錄';
+        if (countEl) countEl.innerText = '0 筆';
         if (toggleBtn) toggleBtn.style.display = 'none';
         return;
       }
 
-      if (countEl) countEl.innerText = `${filtered.length} 筆紀錄`;
+      if (countEl) countEl.innerText = `${filtered.length} 筆`;
 
       if (!filtered.length) {
         listEl.innerHTML = '<div style="text-align:center; color:var(--text-sub); font-size:13px; padding:12px 0;">此篩選條件下尚無充電紀錄</div>';
