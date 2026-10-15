@@ -61,8 +61,23 @@
     .car-n7 { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
     .car-default { background: rgba(161, 161, 170, 0.15); color: #d4d4d8; border: 1px solid rgba(161, 161, 170, 0.3); }
 
+    /* 雙車款分帳統計區塊 */
+    .split-box { background: rgba(255,255,255,0.025); border: 1px solid var(--border); border-radius: 14px; padding: 12px; margin-bottom: 14px; }
+    .split-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-sub); margin-bottom: 8px; }
+    .split-bar-bg { width: 100%; height: 8px; background: #27272a; border-radius: 99px; overflow: hidden; display: flex; margin-bottom: 10px; }
+    .split-bar-bria { background: #22c55e; height: 100%; transition: width 0.5s ease; }
+    .split-bar-n7 { background: #38bdf8; height: 100%; transition: width 0.5s ease; }
+    .split-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .split-item { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 8px 10px; }
+    .split-item.bria { border-left: 3px solid #22c55e; }
+    .split-item.n7 { border-left: 3px solid #38bdf8; }
+    .split-car-title { font-size: 12px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .split-stat-line { font-size: 12px; color: var(--text-sub); display: flex; justify-content: space-between; align-items: center; margin-top: 3px; }
+    .split-stat-line b { font-size: 13px; color: var(--text-main); }
+
     /* 歷史帳單篩選與摺疊按鈕 */
-    .filter-select { background: #27272a; color: var(--text-main); border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; font-size: 12px; font-weight: 500; outline: none; }
+    .filter-group { display: flex; gap: 6px; align-items: center; }
+    .filter-select { background: #27272a; color: var(--text-main); border: 1px solid var(--border); border-radius: 8px; padding: 4px 6px; font-size: 12px; font-weight: 500; outline: none; }
     .toggle-btn { width: 100%; margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px; color: var(--text-sub); font-size: 13px; font-weight: 600; cursor: pointer; text-align: center; transition: background 0.2s; }
     .toggle-btn:active { background: rgba(255,255,255,0.08); }
 
@@ -171,17 +186,55 @@
     <div class="row"><span class="name">本月相比油車省下</span><span class="save-badge" id="savedMoney">💰 淨省 NT$ 0 元</span></div>
   </div>
 
-  <!-- 歷史充電紀錄明細卡片（支援月份篩選與超過 5 筆自動收合） -->
+  <!-- 歷史充電紀錄明細卡片（支援雙車款分帳統計、車款/月份篩選與超過 5 筆自動收合） -->
   <div class="card" style="margin-top: 16px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
       <div style="display: flex; align-items: baseline; gap: 8px;">
         <span style="font-weight: 600; font-size: 16px;">📋 歷史充電帳單</span>
         <span style="font-size: 12px; color: var(--text-sub);" id="history-count">0 筆紀錄</span>
       </div>
-      <select id="monthFilter" class="filter-select" onchange="onMonthFilterChange()">
-        <option value="all">全部月份</option>
-      </select>
+      <div class="filter-group">
+        <select id="carFilter" class="filter-select" onchange="onFilterChange()">
+          <option value="all">全部車款</option>
+          <option value="bria">🟢 Bria</option>
+          <option value="n7">🔵 n7</option>
+        </select>
+        <select id="monthFilter" class="filter-select" onchange="onFilterChange()">
+          <option value="all">全部月份</option>
+        </select>
+      </div>
     </div>
+
+    <!-- 雙車款分帳統計與比例條 -->
+    <div class="split-box" id="splitSummaryBox">
+      <div class="split-header">
+        <span id="splitPeriodLabel">📊 雙車款用電與費用分帳 (全部月份)</span>
+        <span id="splitTotalCount">共 0 次充電</span>
+      </div>
+      <div class="split-bar-bg">
+        <div class="split-bar-bria" id="barBria" style="width: 50%;"></div>
+        <div class="split-bar-n7" id="barN7" style="width: 50%;"></div>
+      </div>
+      <div class="split-grid">
+        <div class="split-item bria">
+          <div class="split-car-title">
+            <span style="color: #4ade80;">🟢 Foxtron Bria</span>
+            <span id="briaPct" style="color: var(--text-sub);">0%</span>
+          </div>
+          <div class="split-stat-line"><span>累計電量</span><b id="briaEnergy">0.0 kWh</b></div>
+          <div class="split-stat-line"><span>累計費用</span><b id="briaCost" class="highlight">NT$ 0.0</b></div>
+        </div>
+        <div class="split-item n7">
+          <div class="split-car-title">
+            <span style="color: #38bdf8;">🔵 Luxgen n7</span>
+            <span id="n7Pct" style="color: var(--text-sub);">0%</span>
+          </div>
+          <div class="split-stat-line"><span>累計電量</span><b id="n7Energy">0.0 kWh</b></div>
+          <div class="split-stat-line"><span>累計費用</span><b id="n7Cost" class="highlight">NT$ 0.0</b></div>
+        </div>
+      </div>
+    </div>
+
     <div id="history-list" style="display: flex; flex-direction: column; gap: 10px;">
       <div style="text-align: center; color: var(--text-sub); font-size: 13px; padding: 12px 0;">
         讀取歷史紀錄中...
@@ -204,6 +257,13 @@
     let allHistoryRecords = [];
     let isHistoryExpanded = false;
     const HISTORY_LIMIT = 5;
+
+    // 判斷紀錄屬於哪一台車 ('n7' | 'bria')
+    function getVehicleType(vehicleName) {
+      const v = (vehicleName || '').toLowerCase();
+      if (v.includes('n7') || v.includes('luxgen')) return 'n7';
+      return 'bria';
+    }
 
     // 依車款名稱回傳對應的配色標籤 Class（Bria 翡翠綠 vs. n7 科技藍）
     function getVehicleBadgeClass(vehicleName) {
@@ -230,7 +290,6 @@
       timeEl.innerText = updatedAtStr || '-';
       if (!updatedAtStr) return;
 
-      // 將 YYYY-MM-DD 轉為 YYYY/MM/DD 確保 iOS Safari 正確解析時間
       const parsedTime = new Date(updatedAtStr.replace(/-/g, '/'));
       if (isNaN(parsedTime.getTime())) return;
 
@@ -387,13 +446,57 @@
       return match ? match[1] : '其他';
     }
 
-    // 渲染歷史帳單清單（依月份篩選與展開狀態）
+    // 渲染雙車款分帳統計與歷史帳單清單
     function renderHistory() {
       const listEl = document.getElementById('history-list');
       const countEl = document.getElementById('history-count');
-      const filterEl = document.getElementById('monthFilter');
+      const monthFilterEl = document.getElementById('monthFilter');
+      const carFilterEl = document.getElementById('carFilter');
       const toggleBtn = document.getElementById('toggleHistoryBtn');
-      const selectedMonth = filterEl ? filterEl.value : 'all';
+
+      const selectedMonth = monthFilterEl ? monthFilterEl.value : 'all';
+      const selectedCar = carFilterEl ? carFilterEl.value : 'all';
+
+      // 1. 先依月份篩選出該區間所有紀錄，計算雙車款分帳統計
+      const monthFiltered = selectedMonth === 'all'
+        ? allHistoryRecords
+        : allHistoryRecords.filter(item => extractMonth(item) === selectedMonth);
+
+      let briaEnergy = 0, briaCost = 0, briaCount = 0;
+      let n7Energy = 0, n7Cost = 0, n7Count = 0;
+
+      monthFiltered.forEach(item => {
+        const type = getVehicleType(item.vehicle);
+        const e = parseFloat(item.energy) || 0;
+        const c = parseFloat(item.cost) || 0;
+        if (type === 'n7') {
+          n7Energy += e;
+          n7Cost += c;
+          n7Count += 1;
+        } else {
+          briaEnergy += e;
+          briaCost += c;
+          briaCount += 1;
+        }
+      });
+
+      const totalEnergy = briaEnergy + n7Energy;
+      const briaPct = totalEnergy > 0 ? Math.round((briaEnergy / totalEnergy) * 100) : 0;
+      const n7Pct = totalEnergy > 0 ? (100 - briaPct) : 0;
+
+      document.getElementById('splitPeriodLabel').innerText = selectedMonth === 'all'
+        ? '📊 雙車款用電與費用分帳 (全部月份)'
+        : `📊 雙車款用電與費用分帳 (${selectedMonth})`;
+      document.getElementById('splitTotalCount').innerText = `共 ${monthFiltered.length} 次充電`;
+
+      document.getElementById('barBria').style.width = totalEnergy > 0 ? `${briaPct}%` : '50%';
+      document.getElementById('barN7').style.width = totalEnergy > 0 ? `${n7Pct}%` : '50%';
+      document.getElementById('briaPct').innerText = `${briaPct}% (${briaCount}次)`;
+      document.getElementById('n7Pct').innerText = `${n7Pct}% (${n7Count}次)`;
+      document.getElementById('briaEnergy').innerText = `${briaEnergy.toFixed(1)} kWh`;
+      document.getElementById('briaCost').innerText = `NT$ ${briaCost.toFixed(1)}`;
+      document.getElementById('n7Energy').innerText = `${n7Energy.toFixed(1)} kWh`;
+      document.getElementById('n7Cost').innerText = `NT$ ${n7Cost.toFixed(1)}`;
 
       if (!allHistoryRecords.length) {
         listEl.innerHTML = '<div style="text-align:center; color:var(--text-sub); font-size:13px; padding:12px 0;">尚無歷史充電紀錄</div>';
@@ -402,11 +505,18 @@
         return;
       }
 
-      const filtered = selectedMonth === 'all'
-        ? allHistoryRecords
-        : allHistoryRecords.filter(item => extractMonth(item) === selectedMonth);
+      // 2. 再依車款篩選器過濾下方列表
+      const filtered = selectedCar === 'all'
+        ? monthFiltered
+        : monthFiltered.filter(item => getVehicleType(item.vehicle) === selectedCar);
 
       if (countEl) countEl.innerText = `${filtered.length} 筆紀錄`;
+
+      if (!filtered.length) {
+        listEl.innerHTML = '<div style="text-align:center; color:var(--text-sub); font-size:13px; padding:12px 0;">此篩選條件下尚無充電紀錄</div>';
+        if (toggleBtn) toggleBtn.style.display = 'none';
+        return;
+      }
 
       const visibleRecords = isHistoryExpanded ? filtered : filtered.slice(0, HISTORY_LIMIT);
 
@@ -441,7 +551,7 @@
       }
     }
 
-    function onMonthFilterChange() {
+    function onFilterChange() {
       isHistoryExpanded = false;
       renderHistory();
     }
