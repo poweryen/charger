@@ -39,11 +39,27 @@
     .tou-countdown { font-size: 13px; color: var(--text-sub); }
     .tou-countdown b { color: var(--text-main); }
 
+    /* 動態電力流向圖 (EMS Energy Flow) */
+    .flow-card { background: var(--card-bg); border-radius: 18px; padding: 12px 10px; margin-bottom: 14px; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: space-between; }
+    .flow-node { display: flex; flex-direction: column; align-items: center; text-align: center; width: 30%; background: rgba(255,255,255,0.025); border: 1px solid var(--border); border-radius: 12px; padding: 8px 4px; transition: all 0.3s ease; }
+    .flow-node.active-green { border-color: rgba(34, 197, 94, 0.45); background: rgba(34, 197, 94, 0.06); }
+    .flow-node.active-amber { border-color: rgba(245, 158, 11, 0.45); background: rgba(245, 158, 11, 0.06); }
+    .flow-node.active-blue { border-color: rgba(56, 189, 248, 0.45); background: rgba(56, 189, 248, 0.06); }
+    .flow-title { font-size: 11px; font-weight: 700; color: var(--text-main); white-space: nowrap; margin-bottom: 3px; }
+    .flow-sub { font-size: 10px; color: var(--text-sub); white-space: nowrap; font-weight: 500; }
+    .flow-line { flex: 1; height: 2px; background: repeating-linear-gradient(to right, #3f3f46 0, #3f3f46 4px, transparent 4px, transparent 8px); position: relative; margin: 0 4px; overflow: hidden; border-radius: 2px; }
+    .flow-line.standby { background: repeating-linear-gradient(to right, #38bdf8 0, #38bdf8 4px, transparent 4px, transparent 8px); opacity: 0.5; }
+    .flow-line.charging { background: rgba(34, 197, 94, 0.25); height: 3px; }
+    .flow-line.charging::after { content: ''; position: absolute; top: 0; left: -35%; width: 35%; height: 100%; background: linear-gradient(90deg, transparent, #4ade80, transparent); animation: flowAnim 1.1s linear infinite; }
+    @keyframes flowAnim { 0% { left: -35%; } 100% { left: 100%; } }
+
     /* HA 原生質感雙儀表盤 */
     .gauges { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
     .gauge-card { background: var(--card-bg); border-radius: 18px; padding: 14px 10px 12px; text-align: center; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .gauge-card svg { width: 100%; max-width: 165px; overflow: visible; }
-    .gauge-card .label { font-size: 13px; color: var(--text-sub); margin-top: 6px; font-weight: 500; }
+    .gauge-card .label { font-size: 13px; color: var(--text-sub); margin-top: 6px; font-weight: 600; }
+    .gauge-sub { font-size: 11px; color: #71717a; margin-top: 4px; font-weight: 500; white-space: nowrap; }
+    .gauge-sub b { color: #d4d4d8; font-weight: 600; }
 
     /* 清單列表 */
     .list-title { font-size: 14px; font-weight: 600; color: #a1a1aa; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
@@ -76,9 +92,11 @@
     .split-stat-line { font-size: 12px; color: var(--text-sub); display: flex; justify-content: space-between; align-items: center; margin-top: 3px; }
     .split-stat-line b { font-size: 13px; color: var(--text-main); }
 
-    /* 歷史帳單篩選與摺疊按鈕 */
+    /* 歷史帳單篩選、匯出與摺疊按鈕 */
     .filter-group { display: flex; gap: 6px; align-items: center; }
     .filter-select { background: #27272a; color: var(--text-main); border: 1px solid var(--border); border-radius: 8px; padding: 4px 6px; font-size: 12px; font-weight: 500; outline: none; }
+    .csv-btn { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 4px 8px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .csv-btn:active { opacity: 0.7; }
     .toggle-btn { width: 100%; margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px; color: var(--text-sub); font-size: 13px; font-weight: 600; cursor: pointer; text-align: center; transition: background 0.2s; }
     .toggle-btn:active { background: rgba(255,255,255,0.08); }
 
@@ -111,6 +129,24 @@
     </div>
   </div>
 
+  <!-- 商用級 EMS 動態電力流向圖 -->
+  <div class="flow-card">
+    <div class="flow-node" id="flowGridNode">
+      <div class="flow-title" id="flowGridTitle">🟢 台電離峰電網</div>
+      <div class="flow-sub" id="flowGridSub">-- 元/度</div>
+    </div>
+    <div class="flow-line" id="flowLine1"></div>
+    <div class="flow-node" id="flowEvseNode">
+      <div class="flow-title">⚡ 16A 充電樁</div>
+      <div class="flow-sub" id="flowEvseSub">🔒 斷電上鎖</div>
+    </div>
+    <div class="flow-line" id="flowLine2"></div>
+    <div class="flow-node" id="flowCarNode">
+      <div class="flow-title" id="flowCarTitle">🚗 設定車輛</div>
+      <div class="flow-sub" id="flowCarSub">🅿️ 未插槍待命</div>
+    </div>
+  </div>
+
   <!-- HA 原生質感雙儀表盤：即時充電功率與即時充電電流 -->
   <div class="gauges">
     <!-- 功率儀表 -->
@@ -135,6 +171,7 @@
         </text>
       </svg>
       <div class="label">即時充電功率</div>
+      <div class="gauge-sub" id="voltageSub">⚡ 線路狀態：<b>待命 (0V)</b></div>
     </div>
 
     <!-- 電流儀表 -->
@@ -159,6 +196,7 @@
         </text>
       </svg>
       <div class="label">即時充電電流</div>
+      <div class="gauge-sub" id="loadSub">🛡️ 送審規格：<b>16A (斷路器20A)</b></div>
     </div>
   </div>
 
@@ -182,17 +220,19 @@
     <div class="list-title">📅 當月累計與節費統計</div>
     <div class="row"><span class="name">本月充電總量</span><span class="value" id="monthEnergy">0.0 kWh</span></div>
     <div class="row"><span class="name">本月充電總電費</span><span class="value highlight" id="monthCost">0.0 元</span></div>
+    <div class="row"><span class="name">本月平均每度電價</span><span class="value" id="avgRateVal" style="color: #d4d4d8;">0.00 元/度</span></div>
     <div class="row"><span class="name">本月累計補充續航<span class="sub-note">(6 km/度)</span></span><span class="value" id="monthKm" style="color: #38bdf8;">約 +0 km</span></div>
+    <div class="row"><span class="name">折合油車等效油耗<span class="sub-note">(95無鉛 30元/L)</span></span><span class="value" id="equivKmL" style="color: #4ade80;">🔥 相當於 0.0 km/L</span></div>
     <div class="row"><span class="name">同度數超充站電費<span class="sub-note">(6.5 元/度)</span></span><span class="value" id="dcCost" style="color: var(--text-sub);">約 NT$ 0 元</span></div>
     <div class="row"><span class="name">同里程燃油車油資<span class="sub-note">(12.5 km/L)</span></span><span class="value" id="gasCost" style="color: var(--text-sub);">約 NT$ 0 元</span></div>
     <div class="row"><span class="name">本月相比超充省下</span><span class="save-badge-dc" id="savedDcMoney">⚡ 淨省 NT$ 0 元</span></div>
     <div class="row"><span class="name">本月相比油車省下</span><span class="save-badge" id="savedMoney">💰 淨省 NT$ 0 元</span></div>
   </div>
 
-  <!-- 歷史充電紀錄明細卡片（支援雙車款分帳統計、車款/月份篩選與超過 5 筆自動收合） -->
+  <!-- 歷史充電紀錄明細卡片 -->
   <div class="card" style="margin-top: 16px;">
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
-      <div style="display: flex; align-items: baseline; gap: 8px;">
+      <div style="display: flex; align-items: baseline; gap: 6px;">
         <span style="font-weight: 600; font-size: 16px;">📋 歷史充電帳單</span>
         <span style="font-size: 12px; color: var(--text-sub);" id="history-count">0 筆紀錄</span>
       </div>
@@ -205,6 +245,7 @@
         <select id="monthFilter" class="filter-select" onchange="onFilterChange()">
           <option value="all">全部月份</option>
         </select>
+        <button class="csv-btn" onclick="exportCSV()">📥 匯出</button>
       </div>
     </div>
 
@@ -268,7 +309,7 @@
       return 'bria';
     }
 
-    // 依車款名稱回傳對應的配色標籤 Class（Bria 翡翠綠 vs. n7 科技藍）
+    // 依車款名稱回傳對應的配色標籤 Class
     function getVehicleBadgeClass(vehicleName) {
       const v = (vehicleName || '').toLowerCase();
       if (v.includes('n7') || v.includes('luxgen')) return 'car-badge car-n7';
@@ -325,6 +366,74 @@
       }
     }
 
+    // 更新動態電力流向圖 (EMS Energy Flow)
+    function updateEnergyFlow(rate, status, power, vehicleName) {
+      const numRate = parseFloat(rate || 0);
+      const isOffPeak = (numRate > 0 && numRate <= 2.2);
+      const isCharging = (status === 'Charging' || power > 0.1);
+      const isPluggedWaiting = (!isCharging && status && status !== 'Available' && status !== 'unavailable' && status !== 'unknown');
+
+      // 1. 左節點：台電電網（隨時間自動切換離峰/尖峰）
+      const gridNode = document.getElementById('flowGridNode');
+      const gridTitle = document.getElementById('flowGridTitle');
+      const gridSub = document.getElementById('flowGridSub');
+      if (isOffPeak) {
+        gridNode.className = 'flow-node active-green';
+        gridTitle.innerText = '🟢 台電離峰電網';
+      } else {
+        gridNode.className = 'flow-node active-amber';
+        gridTitle.innerText = '🟠 台電尖峰電網';
+      }
+      gridSub.innerText = `${numRate || '--'} 元/度`;
+
+      // 2. 中節點：16A 充電樁
+      const evseNode = document.getElementById('flowEvseNode');
+      const evseSub = document.getElementById('flowEvseSub');
+      if (isCharging) {
+        evseNode.className = 'flow-node active-green';
+        evseSub.innerText = `⚡ 送電 ${power.toFixed(2)} kW`;
+      } else if (isPluggedWaiting) {
+        evseNode.className = 'flow-node active-blue';
+        evseSub.innerText = '⏳ 插槍等待排程';
+      } else {
+        evseNode.className = 'flow-node';
+        evseSub.innerText = '🔒 斷電上鎖待命';
+      }
+
+      // 3. 右節點：充電車輛與插槍狀態
+      const carNode = document.getElementById('flowCarNode');
+      const carTitle = document.getElementById('flowCarTitle');
+      const carSub = document.getElementById('flowCarSub');
+      const isN7 = getVehicleType(vehicleName) === 'n7';
+      const displayCar = (vehicleName && vehicleName !== '-') ? vehicleName : '未指定車輛';
+      carTitle.innerText = isN7 ? `🔵 ${displayCar}` : `🟢 ${displayCar}`;
+
+      if (isCharging) {
+        carNode.className = isN7 ? 'flow-node active-blue' : 'flow-node active-green';
+        carSub.innerText = '⚡ 充電進電中';
+      } else if (isPluggedWaiting) {
+        carNode.className = isN7 ? 'flow-node active-blue' : 'flow-node active-green';
+        carSub.innerText = '🔌 已插槍待命';
+      } else {
+        carNode.className = 'flow-node';
+        carSub.innerText = '🅿️ 未插槍待命';
+      }
+
+      // 4. 連接線動態光點
+      const line1 = document.getElementById('flowLine1');
+      const line2 = document.getElementById('flowLine2');
+      if (isCharging) {
+        line1.className = 'flow-line charging';
+        line2.className = 'flow-line charging';
+      } else if (isPluggedWaiting) {
+        line1.className = 'flow-line';
+        line2.className = 'flow-line standby';
+      } else {
+        line1.className = 'flow-line';
+        line2.className = 'flow-line';
+      }
+    }
+
     // 更新電價時段燈號與離峰倒數計時
     function updateTouStatus(rate, scheduleStr) {
       const badgeEl = document.getElementById('touBadge');
@@ -351,7 +460,7 @@
         }
       } else {
         badgeEl.className = 'tou-pill peak';
-        badgeEl.innerText = `🟠 非離峰時段 (${numRate} 元/度)`;
+        badgeEl.innerText = `🟠 尖峰時段 (${numRate} 元/度)`;
         if (curMins >= 360 && curMins < 660) {
           const rem = 660 - curMins;
           countdownEl.innerHTML = `⏳ 距離 11:00 離峰優惠還有 <b>${Math.floor(rem / 60)} 小時 ${rem % 60} 分</b>`;
@@ -368,24 +477,39 @@
         const data = await res.json();
         if (!data) return;
 
+        const power = parseFloat(data.power || 0);
+        const current = parseFloat(data.current || 0);
+        const isCharging = (data.status === 'Charging' || power > 0.1);
+
         // 狀態與排程
-        const isCharging = (data.status === 'Charging' || data.power > 0.1);
         const badge = document.getElementById('statusBadge');
         badge.innerText = isCharging ? '⚡ 充電中' : (data.status === 'Available' ? '待命中' : data.status);
         badge.className = isCharging ? 'status-badge charging' : 'status-badge';
         const schedStr = data.schedule || '全日離峰';
         document.getElementById('scheduleText').innerText = schedStr;
 
-        // 更新電價燈號與離峰倒數
+        // 更新電價燈號、離峰倒數與動態電力流向圖
         updateTouStatus(data.rate, schedStr);
+        updateEnergyFlow(data.rate, data.status, power, data.vehicle);
 
-        // 即時數值與 HA 風格儀表板動態指針（配合 20A 斷路器，滿刻度設為 4.5kW / 20A）
-        const power = parseFloat(data.power || 0);
-        const current = parseFloat(data.current || 0);
+        // 雙儀表板動態指針（配合 20A 斷路器，滿刻度設為 4.5kW / 20A）
         updateGauge('needlePower', 'powerVal', power, 4.5, 'kW');
         updateGauge('needleCurrent', 'currentVal', current, 20, 'A');
 
-        // 本次充電車輛（套用雙車款專屬配色標籤）
+        // 雙儀表下方：即時推算電壓 (V) 與 16A 額定負載率 (%)
+        const voltageSubEl = document.getElementById('voltageSub');
+        const loadSubEl = document.getElementById('loadSub');
+        if (isCharging && current > 0.5) {
+          const calcVolt = (power * 1000) / current;
+          const loadPct = Math.round((current / 16.0) * 100);
+          voltageSubEl.innerHTML = `⚡ 即時電壓：<b>${calcVolt.toFixed(1)} V</b>`;
+          loadSubEl.innerHTML = `🛡️ 16A 額定負載：<b style="color: ${loadPct > 100 ? '#f59e0b' : '#4ade80'};">${loadPct}%</b>`;
+        } else {
+          voltageSubEl.innerHTML = `⚡ 線路狀態：<b>待命 (0V)</b>`;
+          loadSubEl.innerHTML = `🛡️ 送審規格：<b>16A (斷路器20A)</b>`;
+        }
+
+        // 本次充電車輛
         const vName = data.vehicle || '-';
         const vEl = document.getElementById('vehicleName');
         if (vName !== '-') {
@@ -394,7 +518,7 @@
           vEl.innerText = '-';
         }
 
-        // 時段格式化：分兩排向右對齊
+        // 時段格式化
         const rawTime = data.session_time || '';
         const timeEl = document.getElementById('sessionTime');
         if (rawTime.includes(' ~ ')) {
@@ -416,9 +540,13 @@
         const monthEnergy = monthEnergyRaw > 0 ? monthEnergyRaw : sessionEnergy;
         const monthCost = parseFloat(data.month_cost || 0);
 
-        // 續航、超充價差與省油錢換算（6 km/度，超充 6.5 元/度，油車 12.5 km/L、95無鉛 30元/L）
+        // 續航、平均電價、等效油車油耗 (km/L)、超充與油車省錢換算
         const sessionKm = Math.round(sessionEnergy * 6.0);
         const monthKm = Math.round(monthEnergy * 6.0);
+        const avgRate = monthEnergy > 0 ? (monthCost / monthEnergy) : 0;
+        const equivLiters = monthCost / 30.0; // 181.2元相當於買幾公升 30元/L 的汽油
+        const equivKmL = (equivLiters > 0 && monthKm > 0) ? (monthKm / equivLiters) : 0;
+
         const dcCost = Math.round(monthEnergy * 6.5);
         const savedDcMoney = Math.max(0, Math.round(dcCost - monthCost));
         const gasCost = Math.round((monthKm / 12.5) * 30);
@@ -432,13 +560,14 @@
 
         document.getElementById('monthEnergy').innerText = `${monthEnergy.toFixed(1)} kWh`;
         document.getElementById('monthCost').innerText = `${monthCost.toFixed(1)} 元`;
+        document.getElementById('avgRateVal').innerText = `${avgRate.toFixed(2)} 元/度`;
         document.getElementById('monthKm').innerText = `約 +${monthKm} km`;
+        document.getElementById('equivKmL').innerText = equivKmL > 0 ? `🔥 相當於 ${equivKmL.toFixed(1)} km/L` : '-';
         document.getElementById('dcCost').innerText = `約 NT$ ${dcCost} 元`;
         document.getElementById('gasCost').innerText = `約 NT$ ${gasCost} 元`;
         document.getElementById('savedDcMoney').innerText = `⚡ 淨省 NT$ ${savedDcMoney} 元`;
         document.getElementById('savedMoney').innerText = `💰 淨省 NT$ ${savedMoney} 元`;
 
-        // 檢查同步時效與更新狀態燈
         updateSyncHealth(data.updated_at, false);
       } catch (err) {
         console.error("同步失敗:", err);
@@ -453,21 +582,62 @@
       return match ? match[1] : '其他';
     }
 
+    // 取得目前篩選後的紀錄陣列
+    function getFilteredHistory() {
+      const monthFilterEl = document.getElementById('monthFilter');
+      const carFilterEl = document.getElementById('carFilter');
+      const selectedMonth = monthFilterEl ? monthFilterEl.value : 'all';
+      const selectedCar = carFilterEl ? carFilterEl.value : 'all';
+
+      const monthFiltered = selectedMonth === 'all'
+        ? allHistoryRecords
+        : allHistoryRecords.filter(item => extractMonth(item) === selectedMonth);
+
+      const filtered = selectedCar === 'all'
+        ? monthFiltered
+        : monthFiltered.filter(item => getVehicleType(item.vehicle) === selectedCar);
+
+      return { selectedMonth, selectedCar, monthFiltered, filtered };
+    }
+
+    // 匯出 CSV 報表（支援 Excel / iOS Numbers 中文不亂碼）
+    function exportCSV() {
+      const { selectedMonth, filtered } = getFilteredHistory();
+      if (!filtered.length) {
+        alert('目前篩選條件下沒有可匯出的充電紀錄！');
+        return;
+      }
+
+      const headers = ['工單編號', '充電車輛', '充電時段', '充電時長', '充入電量(kWh)', '充電費用(NT$)'];
+      const rows = filtered.map(item => [
+        `"${item.order_id || ''}"`,
+        `"${item.vehicle || '電動車'}"`,
+        `"${(item.start_end || item.created_at || '').replace(/-/g, '/')}"`,
+        `"${item.duration || ''}"`,
+        item.energy !== undefined ? Number(item.energy).toFixed(2) : '0.00',
+        item.cost !== undefined ? Number(item.cost).toFixed(1) : '0.0'
+      ]);
+
+      const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const suffix = selectedMonth === 'all' ? '全部月份' : selectedMonth.replace('/', '-');
+      a.href = url;
+      a.download = `車位充電帳單_${suffix}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
     // 渲染雙車款分帳統計與歷史帳單清單
     function renderHistory() {
       const listEl = document.getElementById('history-list');
       const countEl = document.getElementById('history-count');
-      const monthFilterEl = document.getElementById('monthFilter');
-      const carFilterEl = document.getElementById('carFilter');
       const toggleBtn = document.getElementById('toggleHistoryBtn');
 
-      const selectedMonth = monthFilterEl ? monthFilterEl.value : 'all';
-      const selectedCar = carFilterEl ? carFilterEl.value : 'all';
-
-      // 1. 先依月份篩選出該區間所有紀錄，計算雙車款分帳統計
-      const monthFiltered = selectedMonth === 'all'
-        ? allHistoryRecords
-        : allHistoryRecords.filter(item => extractMonth(item) === selectedMonth);
+      const { selectedMonth, monthFiltered, filtered } = getFilteredHistory();
 
       let briaEnergy = 0, briaCost = 0, briaCount = 0;
       let n7Energy = 0, n7Cost = 0, n7Count = 0;
@@ -511,11 +681,6 @@
         if (toggleBtn) toggleBtn.style.display = 'none';
         return;
       }
-
-      // 2. 再依車款篩選器過濾下方列表
-      const filtered = selectedCar === 'all'
-        ? monthFiltered
-        : monthFiltered.filter(item => getVehicleType(item.vehicle) === selectedCar);
 
       if (countEl) countEl.innerText = `${filtered.length} 筆紀錄`;
 
@@ -580,10 +745,8 @@
           return;
         }
 
-        // 將工單轉為陣列，最新的排在最上方
         allHistoryRecords = Object.values(data).reverse();
 
-        // 動態建立月份下拉選單
         const filterEl = document.getElementById('monthFilter');
         const currentSelected = filterEl.value;
         const months = [...new Set(allHistoryRecords.map(extractMonth))];
