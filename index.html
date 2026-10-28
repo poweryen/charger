@@ -349,19 +349,19 @@
       <!-- 實車去背主圖層（讀取 n7.png 或 bria.png，或點擊直接更換預覽） -->
       <img id="teslaCarMain" class="tesla-car-main" alt="Charging EV" onerror="onCarImageError()" onload="onCarImageLoad()" />
 
-      <!-- 動態電流線與右前葉子板充電孔呼吸燈（已移除下方多餘陰影線） -->
+      <!-- 動態電流線與右前葉子板充電孔呼吸燈 -->
       <svg class="tesla-cable-svg" viewBox="0 0 400 250">
         <!-- 發光電纜外層光暈 -->
-        <path id="cableOuterGlow" class="cable-outer-glow" d="M 102 218 C 160 204, 206 184, 172 104" stroke="#2dd4bf" />
+        <path id="cableOuterGlow" class="cable-outer-glow" d="M 102 218 C 165 204, 204 176, 166 95" stroke="#2dd4bf" />
         <!-- 發光電纜核心線 -->
-        <path id="cableMainLine" class="cable-main-line" d="M 102 218 C 160 204, 206 184, 172 104" stroke="#38bdf8" />
+        <path id="cableMainLine" class="cable-main-line" d="M 102 218 C 165 204, 204 176, 166 95" stroke="#38bdf8" />
         <!-- 持續流向充電孔的亮白電流脈衝 -->
-        <path id="cableFlowPulse" class="cable-flow-pulse" d="M 102 218 C 160 204, 206 184, 172 104" />
+        <path id="cableFlowPulse" class="cable-flow-pulse" d="M 102 218 C 165 204, 204 176, 166 95" />
 
-        <!-- 右前葉子板充電孔發光點與呼吸波紋（精準位移至 open port 真正位置） -->
-        <circle id="portHaloPulse" class="port-halo-pulse" cx="172" cy="104" r="5" fill="none" stroke="#2dd4bf" stroke-width="2.2" />
-        <circle id="portCoreGlow" cx="172" cy="104" r="4.2" fill="#2dd4bf" opacity="0.9" />
-        <circle id="portCoreCenter" cx="172" cy="104" r="2" fill="#ffffff" />
+        <!-- 右前葉子板充電孔發光點與呼吸波紋 -->
+        <circle id="portHaloPulse" class="port-halo-pulse" cx="166" cy="95" r="5" fill="none" stroke="#2dd4bf" stroke-width="2.2" />
+        <circle id="portCoreGlow" cx="166" cy="95" r="4.2" fill="#2dd4bf" opacity="0.9" />
+        <circle id="portCoreCenter" cx="166" cy="95" r="2" fill="#ffffff" />
       </svg>
 
       <!-- 若尚未上傳圖片時顯示的引導提示 -->
@@ -846,7 +846,6 @@
         img.src = e.target.result;
       };
       reader.readAsDataURL(file);
-      // 清空 input 值，確保下次再點選任何照片都能觸發更新
       event.target.value = '';
     }
 
@@ -870,10 +869,11 @@
         document.getElementById('teslaCarReflection').src = src;
       }
 
-      // 針對兩台實車右前 3/4 角度微調右前葉子板充電孔座標與電流弧線（與實拍去背對齊）
-      const portX = isN7 ? 172 : 175;
-      const portY = isN7 ? 104 : 108;
-      const cablePath = `M 102 218 C 160 204, 206 184, ${portX} ${portY}`;
+      // 依預覽截圖精準校準之充電孔座標：n7 (166, 95)、Bria (157, 97)
+      const portX = isN7 ? 166 : 157;
+      const portY = isN7 ? 95 : 97;
+      const ctrlX2 = isN7 ? 204 : 196;
+      const cablePath = `M 102 218 C 162 204, ${ctrlX2} 176, ${portX} ${portY}`;
 
       const mainColor = isN7 ? '#38bdf8' : '#22c55e';
       const glowColor = isN7 ? '#2dd4bf' : '#4ade80';
