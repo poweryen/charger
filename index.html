@@ -90,6 +90,7 @@
       border: 1px solid var(--border);
       box-shadow: 0 10px 28px rgba(0,0,0,0.55);
       overflow: hidden;
+      cursor: pointer;
       user-select: none;
       -webkit-user-select: none;
     }
@@ -171,7 +172,6 @@
       z-index: 4;
       overflow: visible;
     }
-    .cable-floor-refl { fill: none; stroke-width: 5; stroke-linecap: round; opacity: 0.22; filter: blur(4px); }
     .cable-outer-glow { fill: none; stroke-width: 5.5; stroke-linecap: round; opacity: 0.42; filter: blur(3.5px); }
     .cable-main-line { fill: none; stroke-width: 2.2; stroke-linecap: round; opacity: 0.92; }
     .cable-flow-pulse {
@@ -335,7 +335,7 @@
     </div>
   </div>
 
-  <!-- 特斯拉風格：實車去背 + 鏡面倒影 + 充電孔動態電流舞台（僅在開始充電後顯現） -->
+  <!-- 特斯拉風格：實車去背 + 鏡面倒影 + 充電孔動態電流舞台（點擊圖片可隨時更換預覽照片） -->
   <div class="tesla-stage-card" id="teslaChargingStage" onclick="promptCarPhotoUpload()">
     <input type="file" id="carPhotoInput" accept="image/*" style="display: none;" onchange="onCarPhotoSelected(event)" />
     <div class="tesla-stage-wrap">
@@ -346,32 +346,30 @@
       <!-- 鏡面倒影層（自動同步實車去背圖） -->
       <img id="teslaCarReflection" class="tesla-car-reflection" alt="" />
 
-      <!-- 實車去背主圖層（讀取 n7.png 或 bria.png） -->
+      <!-- 實車去背主圖層（讀取 n7.png 或 bria.png，或點擊直接更換預覽） -->
       <img id="teslaCarMain" class="tesla-car-main" alt="Charging EV" onerror="onCarImageError()" onload="onCarImageLoad()" />
 
-      <!-- 動態電流線與右前葉子板充電孔呼吸燈 -->
+      <!-- 動態電流線與右前葉子板充電孔呼吸燈（已移除下方多餘陰影線） -->
       <svg class="tesla-cable-svg" viewBox="0 0 400 250">
-        <!-- 電纜在鏡面地板上的倒影光暈 -->
-        <path id="cableFloorRefl" class="cable-floor-refl" d="M 118 228 C 165 218, 205 212, 185 188" stroke="#2dd4bf" />
         <!-- 發光電纜外層光暈 -->
-        <path id="cableOuterGlow" class="cable-outer-glow" d="M 105 218 C 162 202, 205 186, 152 104" stroke="#2dd4bf" />
+        <path id="cableOuterGlow" class="cable-outer-glow" d="M 102 218 C 160 204, 206 184, 148 102" stroke="#2dd4bf" />
         <!-- 發光電纜核心線 -->
-        <path id="cableMainLine" class="cable-main-line" d="M 105 218 C 162 202, 205 186, 152 104" stroke="#38bdf8" />
+        <path id="cableMainLine" class="cable-main-line" d="M 102 218 C 160 204, 206 184, 148 102" stroke="#38bdf8" />
         <!-- 持續流向充電孔的亮白電流脈衝 -->
-        <path id="cableFlowPulse" class="cable-flow-pulse" d="M 105 218 C 162 202, 205 186, 152 104" />
+        <path id="cableFlowPulse" class="cable-flow-pulse" d="M 102 218 C 160 204, 206 184, 148 102" />
 
         <!-- 右前葉子板充電孔發光點與呼吸波紋 -->
-        <circle id="portHaloPulse" class="port-halo-pulse" cx="152" cy="104" r="5" fill="none" stroke="#2dd4bf" stroke-width="2.2" />
-        <circle id="portCoreGlow" cx="152" cy="104" r="4.2" fill="#2dd4bf" opacity="0.9" />
-        <circle id="portCoreCenter" cx="152" cy="104" r="2" fill="#ffffff" />
+        <circle id="portHaloPulse" class="port-halo-pulse" cx="148" cy="102" r="5" fill="none" stroke="#2dd4bf" stroke-width="2.2" />
+        <circle id="portCoreGlow" cx="148" cy="102" r="4.2" fill="#2dd4bf" opacity="0.9" />
+        <circle id="portCoreCenter" cx="148" cy="102" r="2" fill="#ffffff" />
       </svg>
 
-      <!-- 若尚未上傳 n7.png / bria.png 時顯示的引導提示 -->
+      <!-- 若尚未上傳圖片時顯示的引導提示 -->
       <div class="tesla-missing-tip" id="teslaMissingTip">
         <div style="font-size: 13px; font-weight: 700; color: #38bdf8; margin-bottom: 4px;" id="missingTipTitle">📸 點此選擇去背實車照</div>
         <div style="font-size: 11.5px; color: var(--text-sub); line-height: 1.45;">
           在 iPhone 相簿長按車身 1 秒點「儲存影像」去背<br>
-          點此直接套用，或命名為 <b>n7.png</b> / <b>bria.png</b> 放入 GitHub
+          點此直接套用預覽（之後隨時點車子也能換圖）
         </div>
       </div>
     </div>
@@ -817,11 +815,9 @@
       tip.classList.add('show');
     }
 
+    // 點擊車子圖片舞台時，隨時開啟手機相簿更換預覽照片
     function promptCarPhotoUpload() {
-      const tip = document.getElementById('teslaMissingTip');
-      if (tip.classList.contains('show')) {
-        document.getElementById('carPhotoInput').click();
-      }
+      document.getElementById('carPhotoInput').click();
     }
 
     function onCarPhotoSelected(event) {
@@ -850,6 +846,8 @@
         img.src = e.target.result;
       };
       reader.readAsDataURL(file);
+      // 清空 input 值，確保下次再點選任何照片都能觸發更新
+      event.target.value = '';
     }
 
     function updateTeslaChargingStage(isCharging, vehicleName) {
@@ -883,7 +881,6 @@
       const outerGlow = document.getElementById('cableOuterGlow');
       const mainLine = document.getElementById('cableMainLine');
       const flowPulse = document.getElementById('cableFlowPulse');
-      const floorRefl = document.getElementById('cableFloorRefl');
       const haloPulse = document.getElementById('portHaloPulse');
       const coreGlow = document.getElementById('portCoreGlow');
       const coreCenter = document.getElementById('portCoreCenter');
@@ -894,7 +891,6 @@
 
       outerGlow.setAttribute('stroke', glowColor);
       mainLine.setAttribute('stroke', mainColor);
-      floorRefl.setAttribute('stroke', glowColor);
 
       haloPulse.setAttribute('cx', portX);
       haloPulse.setAttribute('cy', portY);
@@ -1371,7 +1367,7 @@
       }
 
       try {
-        const res = await fetch(FIREBASE_URL.replace('charger.json', 'history.json'));
+        const res = await fetch(HISTORY_URL);
         const data = await res.json();
         
         if (!data) {
