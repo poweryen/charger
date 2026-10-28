@@ -352,16 +352,16 @@
       <!-- 動態電流線與右前葉子板充電孔呼吸燈（已移除下方多餘陰影線） -->
       <svg class="tesla-cable-svg" viewBox="0 0 400 250">
         <!-- 發光電纜外層光暈 -->
-        <path id="cableOuterGlow" class="cable-outer-glow" d="M 102 218 C 160 204, 206 184, 148 102" stroke="#2dd4bf" />
+        <path id="cableOuterGlow" class="cable-outer-glow" d="M 102 218 C 160 204, 206 184, 172 104" stroke="#2dd4bf" />
         <!-- 發光電纜核心線 -->
-        <path id="cableMainLine" class="cable-main-line" d="M 102 218 C 160 204, 206 184, 148 102" stroke="#38bdf8" />
+        <path id="cableMainLine" class="cable-main-line" d="M 102 218 C 160 204, 206 184, 172 104" stroke="#38bdf8" />
         <!-- 持續流向充電孔的亮白電流脈衝 -->
-        <path id="cableFlowPulse" class="cable-flow-pulse" d="M 102 218 C 160 204, 206 184, 148 102" />
+        <path id="cableFlowPulse" class="cable-flow-pulse" d="M 102 218 C 160 204, 206 184, 172 104" />
 
-        <!-- 右前葉子板充電孔發光點與呼吸波紋 -->
-        <circle id="portHaloPulse" class="port-halo-pulse" cx="148" cy="102" r="5" fill="none" stroke="#2dd4bf" stroke-width="2.2" />
-        <circle id="portCoreGlow" cx="148" cy="102" r="4.2" fill="#2dd4bf" opacity="0.9" />
-        <circle id="portCoreCenter" cx="148" cy="102" r="2" fill="#ffffff" />
+        <!-- 右前葉子板充電孔發光點與呼吸波紋（精準位移至 open port 真正位置） -->
+        <circle id="portHaloPulse" class="port-halo-pulse" cx="172" cy="104" r="5" fill="none" stroke="#2dd4bf" stroke-width="2.2" />
+        <circle id="portCoreGlow" cx="172" cy="104" r="4.2" fill="#2dd4bf" opacity="0.9" />
+        <circle id="portCoreCenter" cx="172" cy="104" r="2" fill="#ffffff" />
       </svg>
 
       <!-- 若尚未上傳圖片時顯示的引導提示 -->
@@ -870,9 +870,9 @@
         document.getElementById('teslaCarReflection').src = src;
       }
 
-      // 針對兩台實車右前 3/4 角度微調右前葉子板充電孔座標與電流弧線
-      const portX = isN7 ? 148 : 155;
-      const portY = isN7 ? 102 : 108;
+      // 針對兩台實車右前 3/4 角度微調右前葉子板充電孔座標與電流弧線（與實拍去背對齊）
+      const portX = isN7 ? 172 : 175;
+      const portY = isN7 ? 104 : 108;
       const cablePath = `M 102 218 C 160 204, 206 184, ${portX} ${portY}`;
 
       const mainColor = isN7 ? '#38bdf8' : '#22c55e';
