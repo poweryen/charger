@@ -169,7 +169,7 @@
       z-index: 4;
     }
 
-    /* 充電槍與自然垂墜綠色電流線 SVG 覆蓋層 */
+    /* 充電槍與自然垂墜綠色電流線 SVG 覆蓋層（採用純向量多層次光暈，解決 iOS Safari 濾鏡方框破圖） */
     .tesla-cable-svg {
       position: absolute;
       inset: 0;
@@ -179,18 +179,26 @@
       z-index: 5;
       overflow: visible;
     }
+    .cable-glow-wide {
+      fill: none;
+      stroke-width: 6.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.14;
+    }
     .cable-outer-glow {
       fill: none;
       stroke-width: 3.6;
       stroke-linecap: round;
-      opacity: 0.45;
-      filter: blur(2.2px);
+      stroke-linejoin: round;
+      opacity: 0.32;
     }
     .cable-main-line {
       fill: none;
       stroke-width: 1.55;
       stroke-linecap: round;
-      opacity: 0.95;
+      stroke-linejoin: round;
+      opacity: 0.96;
     }
     .cable-flow-pulse {
       fill: none;
@@ -370,7 +378,7 @@
       <!-- 實車去背主圖層（直接讀取 GitHub 資料夾內的 n7.png / bria.png） -->
       <img id="teslaCarMain" class="tesla-car-main" alt="Charging EV" onerror="onCarImageError()" onload="onCarImageLoad()" />
 
-      <!-- 微型立體充電槍與自然垂墜綠色電流線（無充電線倒影） -->
+      <!-- 微型立體充電槍與自然垂墜綠色電流線（純向量三層同心柔光，完美相容 iOS 與 Mac） -->
       <svg class="tesla-cable-svg" viewBox="0 0 400 250">
         <defs>
           <!-- 充電線末端漸層消散遮罩 -->
@@ -387,11 +395,13 @@
           </linearGradient>
         </defs>
 
-        <!-- 自然垂墜發光電纜外層柔光 -->
+        <!-- 第一層：外圍寬柔光（無 CSS blur，徹底消除手機端方框破圖） -->
+        <path id="cableGlowWide" class="cable-glow-wide" d="M 90 166 C 122 158, 152 150, 162 143 C 167 139, 167 120, 165.5 101" stroke="url(#cableFadeGrad)" />
+        <!-- 第二層：中層光暈 -->
         <path id="cableOuterGlow" class="cable-outer-glow" d="M 90 166 C 122 158, 152 150, 162 143 C 167 139, 167 120, 165.5 101" stroke="url(#cableFadeGrad)" />
-        <!-- 自然垂墜發光電纜細核心線 -->
+        <!-- 第三層：自然垂墜發光電纜細核心線 -->
         <path id="cableMainLine" class="cable-main-line" d="M 90 166 C 122 158, 152 150, 162 143 C 167 139, 167 120, 165.5 101" stroke="url(#cableFadeGrad)" />
-        <!-- 順著電纜向上流進充電槍的細緻電流光點 -->
+        <!-- 第四層：順著電纜向上流進充電槍的細緻電流光點 -->
         <path id="cableFlowPulse" class="cable-flow-pulse" d="M 98 164 C 126 156, 153 149, 162 143 C 167 139, 167 120, 165.5 101" />
 
         <!-- 插入端：充電孔呼吸光暈與等比例微型充電槍頭 -->
@@ -849,7 +859,7 @@
 
     // ==================== 【雙車款獨立倒影與陰影參數調整區】 ====================
     const REFL_CONFIG = {
-      // 🔵 Luxgen n7 專屬參數（已鎖定你調校完成的最佳數值）
+      // 🔵 Luxgen n7 專屬參數（已鎖定最佳數值）
       n7: {
         moveDown: 2,
         leftSideGap: 2,
@@ -863,7 +873,7 @@
         shadowSpreadY: 100
       },
 
-      // 🟢 Foxtron Bria 專屬參數（可單獨微調，完全不影響 n7）
+      // 🟢 Foxtron Bria 專屬參數（已鎖定最佳數值）
       bria: {
         // 1. 整體倒影上下移動
         //    👉 數字調大 (例如 6、10)：整片倒影一起「往下移動」
@@ -1257,6 +1267,7 @@
       // 特斯拉介面風格：從左下方地面平緩延伸 -> 轉折向上 -> 自然垂直進入充電槍尾端
       const cablePath = `M ${startX} ${startY} C ${portX - 44} ${portY + 63}, ${portX - 14} ${portY + 55}, ${bendX} ${bendY} C ${dropX} ${dropY}, ${dropX} ${portY + 24}, ${tailX} ${tailY}`;
 
+      document.getElementById('cableGlowWide').setAttribute('d', cablePath);
       document.getElementById('cableOuterGlow').setAttribute('d', cablePath);
       document.getElementById('cableMainLine').setAttribute('d', cablePath);
       document.getElementById('cableFlowPulse').setAttribute('d', cablePath);
