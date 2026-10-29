@@ -138,7 +138,7 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      opacity: 0.90;
+      opacity: 0.95;
       filter: blur(5.5px);
       pointer-events: none;
       z-index: 2;
@@ -847,43 +847,60 @@
       return 'car-badge car-default';
     }
 
-    // ==================== 【車子倒影與陰影參數調整區】 ====================
+    // ==================== 【雙車款獨立倒影與陰影參數調整區】 ====================
     const REFL_CONFIG = {
-      // 1. 整體倒影上下移動 (預設 2)
-      //    👉 數字調大 (例如 6、10)：整片倒影一起「往下移動」
-      //    👉 數字調小 (例如 0、-4)：整片倒影一起「往上移動」
-      moveDown: 2,
+      // 🔵 Luxgen n7 專屬參數（已鎖定你調校完成的最佳數值）
+      n7: {
+        moveDown: 2,
+        leftSideGap: 2,
+        leftTiltDeg: 12,
+        rightSideGap: 8,
+        rightTiltDeg: 5.0,
+        pivotXRatio: 0.59,
+        scaleY: 0.58,
+        fadeHeightRatio: 0.42,
+        shadowOpacity: 0.95,
+        shadowSpreadY: 100
+      },
 
-      // 2. 左側倒影距離：後輪與左側車門 (預設 0)
-      //    👉 數字調大 (例如 4、8)  ：左側與後輪倒影「往下拉開距離」
-      //    👉 數字調小 (例如 -3、-6)：左側與後輪倒影「往上貼近後輪」
-      leftSideGap: 2,
+      // 🟢 Foxtron Bria 專屬參數（可單獨微調，完全不影響 n7）
+      bria: {
+        // 1. 整體倒影上下移動
+        //    👉 數字調大 (例如 6、10)：整片倒影一起「往下移動」
+        //    👉 數字調小 (例如 0、-4)：整片倒影一起「往上移動」
+        moveDown: 2,
 
-      // 3. 左側斜度：後輪 ↔ 中間前輪對齊角度 (預設 14.5 度)
-      //    👉 數字調大 (例如 17、20)：左端(後輪)倒影「往左上提」
-      //    👉 數字調小 (例如 11、8) ：左端(後輪)倒影「往左下壓」
-      leftTiltDeg: 12,
+        // 2. 左側倒影距離：後輪與左側車門
+        //    👉 數字調大 (例如 4、8)  ：左側與後輪倒影「往下拉開距離」
+        //    👉 數字調小 (例如 -3、-6)：左側與後輪倒影「往上貼近後輪」
+        leftSideGap: 2,
 
-      // 4. 右側倒影距離：車頭前保桿與右前輪 (預設 6)
-      //    👉 數字調大 (例如 10、15)：車頭前保桿倒影「往下退開、離前保桿更遠」
-      //    👉 數字調小 (例如 2、0)  ：車頭前保桿倒影「往上靠近前保桿」
-      rightSideGap: 8,
+        // 3. 左側斜度：後輪 ↔ 中間前輪對齊角度 (度)
+        //    👉 數字調大 (例如 15、18)：左端(後輪)倒影「往左上提」
+        //    👉 數字調小 (例如 10、8) ：左端(後輪)倒影「往左下壓」
+        leftTiltDeg: 12,
 
-      // 5. 右側斜度：中間前輪 ↔ 車頭前保桿對齊角度 (預設 2.0 度)
-      //    👉 數字調大 (例如 6、10) ：車頭最右端倒影「往右上翹起」
-      //    👉 數字調小 (例如 0、-3) ：車頭最右端倒影「往右下壓低(遠離前保桿)」
-      rightTiltDeg: 5.0,
+        // 4. 右側倒影距離：車頭前保桿與右前輪
+        //    👉 數字調大 (例如 10、15)：車頭前保桿倒影「往下退開、離前保桿更遠」
+        //    👉 數字調小 (例如 4、0)  ：車頭前保桿倒影「往上靠近前保桿」
+        rightSideGap: 8,
 
-      // 6. 左右分界中心點 (預設 0.48 代表中間前輪的位置)
-      pivotXRatio: 0.59,
+        // 5. 右側斜度：中間前輪 ↔ 車頭前保桿對齊角度 (度)
+        //    👉 數字調大 (例如 8、10) ：車頭最右端倒影「往右上翹起」
+        //    👉 數字調小 (例如 2、0)  ：車頭最右端倒影「往右下壓低(遠離前保桿)」
+        rightTiltDeg: 5.0,
 
-      // 7. 倒影垂直延伸長度比例 (預設 0.58) 與漸層消散長度 (預設 0.42)
-      scaleY: 0.58,
-      fadeHeightRatio: 0.42,
+        // 6. 左右分界中心點 (預設 0.59)
+        pivotXRatio: 0.59,
 
-      // 8. 全車底盤陰影濃度 (0 ~ 1) 與往下擴散高度 (px)
-      shadowOpacity: 0.95,
-      shadowSpreadY: 100
+        // 7. 倒影垂直延伸長度比例 (預設 0.58) 與漸層消散長度 (預設 0.42)
+        scaleY: 0.58,
+        fadeHeightRatio: 0.42,
+
+        // 8. 全車底盤陰影濃度 (0 ~ 1) 與往下擴散高度 (px)
+        shadowOpacity: 0.95,
+        shadowSpreadY: 100
+      }
     };
 
     // 依序嘗試載入 GitHub 資料夾內的車圖檔名
@@ -896,11 +913,13 @@
       mainEl.src = list[0];
     }
 
-    // 依 REFL_CONFIG 建立左右獨立距離與斜度的鏡面倒影 + 全車底盤陰影
+    // 依當前車款對應的 REFL_CONFIG[currentStageCarType] 獨立建立鏡面倒影與全車底盤陰影
     function buildFourWheelReflection(imgEl) {
       const reflCanvas = document.getElementById('teslaCarReflection');
       const shadowCanvas = document.getElementById('teslaUnderbodyShadow');
       if (!reflCanvas || !shadowCanvas) return;
+
+      const cfg = REFL_CONFIG[currentStageCarType] || REFL_CONFIG.n7;
 
       try {
         const w = imgEl.naturalWidth;
@@ -977,7 +996,7 @@
         const carW = Math.max(10, xRight - xLeft);
 
         // 3. 定位三處車輪接地參考點：P1(左後輪)、P2(中間前輪分界點)、P3(右側遠端前輪)
-        const pivotX = Math.round(xLeft + carW * REFL_CONFIG.pivotXRatio);
+        const pivotX = Math.round(xLeft + carW * cfg.pivotXRatio);
         let x2Car = pivotX;
         let y2Car = -1;
         for (let x = Math.round(xLeft + carW * 0.35); x <= Math.round(xLeft + carW * 0.60); x++) {
@@ -1015,12 +1034,12 @@
           }
         }
 
-        // 4. 計算來源取樣基準線 rawSrcBase[x] 與使用者自訂的倒影位置線 rawDestLine[x]
-        const movePx = REFL_CONFIG.moveDown * 4.0;
-        const leftGapPx = REFL_CONFIG.leftSideGap * 4.0;
-        const rightGapPx = REFL_CONFIG.rightSideGap * 4.0;
-        const leftSlope = Math.tan((REFL_CONFIG.leftTiltDeg * Math.PI) / 180);
-        const rightSlope = Math.tan((REFL_CONFIG.rightTiltDeg * Math.PI) / 180);
+        // 4. 計算來源取樣基準線 rawSrcBase[x] 與該車款專屬的倒影位置線 rawDestLine[x]
+        const movePx = cfg.moveDown * 4.0;
+        const leftGapPx = cfg.leftSideGap * 4.0;
+        const rightGapPx = cfg.rightSideGap * 4.0;
+        const leftSlope = Math.tan((cfg.leftTiltDeg * Math.PI) / 180);
+        const rightSlope = Math.tan((cfg.rightTiltDeg * Math.PI) / 180);
 
         const rawSrcBase = new Float32Array(SW);
         const rawDestLine = new Float32Array(SW);
@@ -1064,12 +1083,12 @@
           smoothDestLine[x] = dSum / cnt;
         }
 
-        // 5. 繪製「全車底盤立體陰影」(#teslaUnderbodyShadow，錨定於車體底部，不隨倒影下移而變形)
-        shadowCanvas.style.opacity = String(REFL_CONFIG.shadowOpacity);
+        // 5. 繪製「全車底盤立體陰影」(#teslaUnderbodyShadow)
+        shadowCanvas.style.opacity = String(cfg.shadowOpacity);
         const shCtx = shadowCanvas.getContext('2d');
         shCtx.clearRect(0, 0, SW, SH);
 
-        const spreadY = REFL_CONFIG.shadowSpreadY;
+        const spreadY = cfg.shadowSpreadY;
         const padX = 14;
         for (let x = Math.max(0, xLeft - padX); x <= Math.min(SW - 1, xRight + padX); x++) {
           const clampedX = Math.min(xRight, Math.max(xLeft, x));
@@ -1107,7 +1126,7 @@
           if (bottomY[x] <= 0) continue;
           const srcY = Math.min(SH - 1, Math.max(10, Math.round(smoothSrcBase[x])));
           const destY = Math.min(SH - 1, Math.max(10, Math.round(smoothDestLine[x])));
-          const destH = Math.round(srcY * REFL_CONFIG.scaleY);
+          const destH = Math.round(srcY * cfg.scaleY);
 
           rCtx.drawImage(
             flippedCanvas,
@@ -1134,7 +1153,7 @@
         gCtx.fillStyle = grad;
         gCtx.fillRect(0, 0, 1, 256);
 
-        const fadeLen = Math.round(drawH * REFL_CONFIG.fadeHeightRatio);
+        const fadeLen = Math.round(drawH * cfg.fadeHeightRatio);
         for (let x = xLeft; x <= xRight; x++) {
           mCtx.drawImage(gradStrip, 0, 0, 1, 256, x, Math.round(smoothDestLine[x]) - 2, 1, fadeLen);
         }
