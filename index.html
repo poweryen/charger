@@ -18,32 +18,65 @@
       --text-main: #f3f4f6;
       --text-sub: #9ca3af;
       --border: #2e3038;
+      --hairline: rgba(255, 255, 255, 0.08);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; }
-    body { background-color: var(--bg); color: var(--text-main); padding: env(safe-area-inset-top, 20px) 16px env(safe-area-inset-bottom, 24px); -webkit-font-smoothing: antialiased; }
-    .header { display: flex; justify-content: space-between; align-items: center; padding: 14px 4px 14px; }
-    .title { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-    .status-badge { font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 20px; background: #27272a; color: #a1a1aa; border: 1px solid var(--border); }
-    .status-badge.charging { background: rgba(34, 197, 94, 0.15); color: var(--accent); border-color: rgba(34, 197, 94, 0.3); }
+    body {
+      background-color: var(--bg);
+      background-image: radial-gradient(ellipse 80% 35% at 50% 0%, rgba(56, 189, 248, 0.06) 0%, transparent 75%);
+      color: var(--text-main);
+      padding: env(safe-area-inset-top, 20px) 18px env(safe-area-inset-bottom, 28px);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    /* 主容器：手機版單欄居中，電腦版自動展開為雙欄寬螢幕座艙 */
+    .app-container {
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      transition: max-width 0.3s ease;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 2px 18px;
+      border-bottom: 1px solid var(--hairline);
+      margin-bottom: 10px;
+    }
+    .title { font-size: 21px; font-weight: 700; display: flex; align-items: center; gap: 8px; letter-spacing: -0.3px; }
+    .status-badge { font-size: 13px; font-weight: 600; padding: 5px 14px; border-radius: 20px; background: rgba(255, 255, 255, 0.05); color: #a1a1aa; border: 1px solid rgba(255, 255, 255, 0.08); }
+    .status-badge.charging { background: rgba(34, 197, 94, 0.15); color: var(--accent); border-color: rgba(34, 197, 94, 0.35); box-shadow: 0 0 16px rgba(34, 197, 94, 0.15); }
     
-    /* 訪客展示模式頂部互動橫幅 */
-    .demo-banner { display: none; background: linear-gradient(135deg, rgba(56, 189, 248, 0.14), rgba(34, 197, 94, 0.10)); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 14px; padding: 10px 12px; margin-bottom: 14px; align-items: center; justify-content: space-between; gap: 8px; }
+    /* 訪客展示模式頂部互動橫幅（無外框極簡膠囊感） */
+    .demo-banner {
+      display: none;
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.12), rgba(34, 197, 94, 0.06), transparent);
+      border-left: 3px solid #38bdf8;
+      padding: 10px 12px;
+      margin: 8px 0 12px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
     .demo-banner.active { display: flex; }
     .demo-info { display: flex; flex-direction: column; gap: 2px; }
     .demo-title { font-size: 12.5px; font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 5px; }
     .demo-sub { font-size: 11px; color: var(--text-sub); }
     .demo-actions { display: flex; gap: 6px; flex-shrink: 0; }
-    .demo-btn { background: rgba(255, 255, 255, 0.08); color: var(--text-main); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 6px 9px; font-size: 11.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-    .demo-btn.unlock { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); }
+    .demo-btn { background: rgba(255, 255, 255, 0.06); color: var(--text-main); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 6px 10px; font-size: 11.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .demo-btn.unlock { background: rgba(56, 189, 248, 0.18); color: #38bdf8; border-color: rgba(56, 189, 248, 0.35); }
     .demo-btn:active { opacity: 0.7; }
 
     /* 屋主 PIN 碼解鎖彈窗 */
-    .pin-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 999; align-items: center; justify-content: center; padding: 20px; }
+    .pin-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.78); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 999; align-items: center; justify-content: center; padding: 20px; }
     .pin-modal-overlay.show { display: flex; }
-    .pin-modal { background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; padding: 22px 20px; width: 100%; max-width: 310px; text-align: center; box-shadow: 0 12px 32px rgba(0,0,0,0.6); }
+    .pin-modal { background: #18191e; border: 1px solid rgba(255,255,255,0.1); border-radius: 22px; padding: 24px 20px; width: 100%; max-width: 310px; text-align: center; box-shadow: 0 16px 40px rgba(0,0,0,0.65); }
     .pin-modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
     .pin-modal p { font-size: 12.5px; color: var(--text-sub); margin-bottom: 16px; line-height: 1.4; }
-    .pin-input { width: 100%; background: #121316; border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-size: 24px; font-weight: 700; color: var(--text-main); text-align: center; letter-spacing: 10px; outline: none; margin-bottom: 10px; transition: opacity 0.2s; }
+    .pin-input { width: 100%; background: #101114; border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-size: 24px; font-weight: 700; color: var(--text-main); text-align: center; letter-spacing: 10px; outline: none; margin-bottom: 10px; transition: opacity 0.2s; }
     .pin-input:focus { border-color: #38bdf8; }
     .pin-input:disabled { opacity: 0.4; cursor: not-allowed; }
     .pin-error { font-size: 12px; color: var(--danger); min-height: 18px; margin-bottom: 10px; font-weight: 600; }
@@ -52,12 +85,45 @@
     .pin-modal-btn.confirm { background: #38bdf8; color: #0f172a; border-color: #38bdf8; font-weight: 700; }
     .pin-modal-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    .card { background: var(--card-bg); border-radius: 18px; padding: 16px; margin-bottom: 14px; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    /* 響應式主網格容器（手機直式單欄 / 電腦雙欄） */
+    .dashboard-grid {
+      display: flex;
+      flex-direction: column;
+    }
+    .layout-col-left,
+    .layout-col-right {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    /* 無邊框極簡區塊：取消卡片底色與四周實線，改用漸層消融分隔線 */
+    .card {
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      padding: 18px 2px;
+      margin-bottom: 0;
+      position: relative;
+    }
+    .card::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.09) 15%, rgba(255, 255, 255, 0.09) 85%, transparent);
+    }
+    .layout-col-right .card:last-child::after {
+      display: none;
+    }
     
     /* 頂部排程與電價倒數橫幅 */
     .banner { font-size: 14px; color: var(--text-sub); display: flex; align-items: center; justify-content: space-between; }
     .banner b { color: #38bdf8; font-weight: 600; }
-    .tou-box { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); display: flex; flex-direction: column; gap: 6px; }
+    .tou-box { margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(255, 255, 255, 0.08); display: flex; flex-direction: column; gap: 6px; }
     .tou-header { display: flex; justify-content: space-between; align-items: center; }
     .tou-pill { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; }
     .tou-pill.off-peak { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
@@ -65,37 +131,75 @@
     .tou-countdown { font-size: 13px; color: var(--text-sub); }
     .tou-countdown b { color: var(--text-main); }
 
-    /* 動態電力流向圖 (EMS Energy Flow) */
-    .flow-card { background: var(--card-bg); border-radius: 18px; padding: 12px 10px; margin-bottom: 14px; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: space-between; }
-    .flow-node { display: flex; flex-direction: column; align-items: center; text-align: center; width: 30%; background: rgba(255,255,255,0.025); border: 1px solid var(--border); border-radius: 12px; padding: 8px 4px; transition: all 0.3s ease; }
-    .flow-node.active-green { border-color: rgba(34, 197, 94, 0.45); background: rgba(34, 197, 94, 0.06); }
-    .flow-node.active-amber { border-color: rgba(245, 158, 11, 0.45); background: rgba(245, 158, 11, 0.06); }
-    .flow-node.active-blue { border-color: rgba(56, 189, 248, 0.45); background: rgba(56, 189, 248, 0.06); }
-    .flow-title { font-size: 11px; font-weight: 700; color: var(--text-main); white-space: nowrap; margin-bottom: 3px; }
-    .flow-sub { font-size: 10px; color: var(--text-sub); white-space: nowrap; font-weight: 600; }
+    /* 無邊框動態電力流向圖 (EMS Energy Flow) */
+    .flow-card {
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      padding: 18px 0;
+      margin-bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+    }
+    .flow-card::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.09) 15%, rgba(255, 255, 255, 0.09) 85%, transparent);
+    }
+    .flow-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      width: 31%;
+      background: transparent;
+      border: none;
+      padding: 6px 2px;
+      transition: all 0.3s ease;
+    }
+    .flow-node.active-green .flow-title { text-shadow: 0 0 12px rgba(34, 197, 94, 0.35); }
+    .flow-node.active-amber .flow-title { text-shadow: 0 0 12px rgba(245, 158, 11, 0.35); }
+    .flow-node.active-blue .flow-title { text-shadow: 0 0 12px rgba(56, 189, 248, 0.35); }
+    .flow-title { font-size: 12px; font-weight: 700; color: var(--text-main); white-space: nowrap; margin-bottom: 4px; }
+    .flow-sub { font-size: 11px; color: var(--text-sub); white-space: nowrap; font-weight: 600; }
     .flow-line { flex: 1; height: 2px; background: repeating-linear-gradient(to right, #3f3f46 0, #3f3f46 4px, transparent 4px, transparent 8px); position: relative; margin: 0 4px; overflow: hidden; border-radius: 2px; }
     .flow-line.standby { background: repeating-linear-gradient(to right, #38bdf8 0, #38bdf8 4px, transparent 4px, transparent 8px); opacity: 0.5; }
     .flow-line.charging { background: rgba(34, 197, 94, 0.25); height: 3px; }
     .flow-line.charging::after { content: ''; position: absolute; top: 0; left: -35%; width: 35%; height: 100%; background: linear-gradient(90deg, transparent, #4ade80, transparent); animation: flowAnim 1.1s linear infinite; }
     @keyframes flowAnim { 0% { left: -35%; } 100% { left: 100%; } }
 
-    /* ==================== 特斯拉原廠 UI 風格：無 CSS Filter 純像素級渲染（根除 iOS 局部重繪方框破圖） ==================== */
+    /* ==================== 特斯拉原廠 UI 風格：無 CSS Filter 純像素級渲染（100% 完整保留原車圖比例與特效，僅移除外框線） ==================== */
     .tesla-stage-card {
       display: none;
       position: relative;
       background:
         radial-gradient(ellipse 68% 42% at 50% 42%, rgba(226, 232, 240, 0.22) 0%, rgba(148, 163, 184, 0.08) 48%, transparent 78%),
-        radial-gradient(ellipse 85% 45% at 52% 68%, rgba(203, 213, 225, 0.14) 0%, rgba(71, 85, 105, 0.06) 52%, transparent 82%),
-        linear-gradient(180deg, #16181f 0%, #20242f 48%, #14171f 100%);
-      border-radius: 18px;
-      padding: 10px 8px 4px;
-      margin-bottom: 14px;
-      border: 1px solid var(--border);
-      box-shadow: 0 10px 28px rgba(0,0,0,0.55);
+        radial-gradient(ellipse 85% 45% at 52% 68%, rgba(203, 213, 225, 0.14) 0%, rgba(71, 85, 105, 0.06) 52%, transparent 82%);
+      border-radius: 0;
+      padding: 14px 4px 8px;
+      margin-bottom: 0;
+      border: none;
+      box-shadow: none;
       overflow: hidden;
       isolation: isolate;
       user-select: none;
       -webkit-user-select: none;
+    }
+    .tesla-stage-card::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.09) 15%, rgba(255, 255, 255, 0.09) 85%, transparent);
     }
     .tesla-stage-card.active { display: block; animation: stageAppear 0.45s cubic-bezier(0.16, 1, 0.3, 1); }
     @keyframes stageAppear { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
@@ -241,17 +345,47 @@
     }
     .tesla-missing-tip.show { display: flex; }
 
-    /* HA 原生質感雙儀表盤 */
-    .gauges { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
-    .gauge-card { background: var(--card-bg); border-radius: 18px; padding: 14px 10px 12px; text-align: center; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .gauge-card svg { width: 100%; max-width: 165px; overflow: visible; }
+    /* 無邊框雙儀表盤 */
+    .gauges {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      padding: 18px 0;
+      margin-bottom: 0;
+      position: relative;
+    }
+    .gauges::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.09) 15%, rgba(255, 255, 255, 0.09) 85%, transparent);
+    }
+    .gauge-card {
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      padding: 6px 8px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .gauge-card:first-child {
+      border-right: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .gauge-card svg { width: 100%; max-width: 170px; overflow: visible; }
     .gauge-card .label { font-size: 13px; color: var(--text-sub); margin-top: 6px; font-weight: 600; }
     .gauge-sub { font-size: 11px; color: #71717a; margin-top: 4px; font-weight: 500; white-space: nowrap; }
     .gauge-sub b { color: #d4d4d8; font-weight: 600; }
 
     /* 清單列表 */
-    .list-title { font-size: 14px; font-weight: 600; color: #a1a1aa; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
-    .row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
+    .list-title { font-size: 14px; font-weight: 700; color: #cbd5e1; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; letter-spacing: 0.2px; }
+    .row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.045); font-size: 14px; }
     .row:last-child { border-bottom: none; }
     .row .name { color: var(--text-sub); flex-shrink: 0; margin-right: 12px; }
     .row .sub-note { font-size: 11px; color: #6b7280; font-weight: 400; margin-left: 4px; }
@@ -266,316 +400,397 @@
     .car-n7 { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
     .car-default { background: rgba(161, 161, 170, 0.15); color: #d4d4d8; border: 1px solid rgba(161, 161, 170, 0.3); }
 
-    /* 雙車款分帳統計區塊 */
-    .split-box { background: rgba(255,255,255,0.025); border: 1px solid var(--border); border-radius: 14px; padding: 12px; margin-bottom: 14px; }
-    .split-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-sub); margin-bottom: 8px; }
-    .split-bar-bg { width: 100%; height: 8px; background: #27272a; border-radius: 99px; overflow: hidden; display: flex; margin-bottom: 10px; }
+    /* 無邊框雙車款分帳統計區塊 */
+    .split-box {
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 6px 0 18px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .split-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-sub); margin-bottom: 10px; }
+    .split-bar-bg { width: 100%; height: 7px; background: #27272a; border-radius: 99px; overflow: hidden; display: flex; margin-bottom: 14px; }
     .split-bar-bria { background: #22c55e; height: 100%; transition: width 0.5s ease; }
     .split-bar-n7 { background: #38bdf8; height: 100%; transition: width 0.5s ease; }
-    .split-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .split-item { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 8px 10px; }
+    .split-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .split-item {
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 2px 4px 2px 12px;
+    }
     .split-item.bria { border-left: 3px solid #22c55e; }
     .split-item.n7 { border-left: 3px solid #38bdf8; }
     .split-car-title { font-size: 11px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; white-space: nowrap; }
-    .split-stat-line { font-size: 12px; color: var(--text-sub); display: flex; justify-content: space-between; align-items: center; margin-top: 3px; }
+    .split-stat-line { font-size: 12px; color: var(--text-sub); display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
     .split-stat-line b { font-size: 13px; color: var(--text-main); }
 
+    /* 無邊框歷史帳單列 */
+    .history-item-frameless {
+      padding: 13px 2px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .history-item-frameless:last-child {
+      border-bottom: none;
+    }
+
     /* 歷史帳單篩選、匯出與摺疊按鈕 */
-    .filter-group { display: flex; gap: 4px; align-items: center; }
-    .filter-select { background: #27272a; color: var(--text-main); border: 1px solid var(--border); border-radius: 8px; padding: 4px 5px; font-size: 11.5px; font-weight: 500; outline: none; }
-    .csv-btn { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 4px 7px; font-size: 11.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .filter-group { display: flex; gap: 6px; align-items: center; }
+    .filter-select { background: rgba(255,255,255,0.05); color: var(--text-main); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 5px 6px; font-size: 11.5px; font-weight: 500; outline: none; }
+    .csv-btn { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 5px 8px; font-size: 11.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
     .csv-btn:active { opacity: 0.7; }
-    .toggle-btn { width: 100%; margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px; color: var(--text-sub); font-size: 13px; font-weight: 600; cursor: pointer; text-align: center; transition: background 0.2s; }
+    .toggle-btn { width: 100%; margin-top: 12px; padding: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; color: var(--text-sub); font-size: 13px; font-weight: 600; cursor: pointer; text-align: center; transition: background 0.2s; }
     .toggle-btn:active { background: rgba(255,255,255,0.08); }
 
     /* 底部同步狀態與模式切換 */
-    .footer { text-align: center; font-size: 12px; color: #71717a; margin-top: 20px; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .footer { text-align: center; font-size: 12px; color: #71717a; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--hairline); display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; }
     .footer.stale { color: #fbbf24; }
     .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: blink 2s infinite; }
     .pulse.stale { background: #f59e0b; animation: blink 1s infinite; }
     .pulse.demo { background: #38bdf8; animation: blink 1.5s infinite; }
-    .mode-switch-link { color: #52525b; text-decoration: none; font-size: 11px; padding: 2px 6px; border-radius: 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); cursor: pointer; margin-left: 4px; }
+    .mode-switch-link { color: #71717a; text-decoration: none; font-size: 11px; padding: 2px 8px; border-radius: 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); cursor: pointer; margin-left: 4px; }
     @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    /* ==================== 🖥️ 電腦版寬螢幕自動響應式排版 (>= 960px) ==================== */
+    @media (min-width: 960px) {
+      body {
+        padding: 32px 44px 48px;
+      }
+      .app-container {
+        max-width: 1220px;
+      }
+      .header {
+        padding: 8px 4px 22px;
+        margin-bottom: 18px;
+      }
+      .title {
+        font-size: 24px;
+      }
+      .demo-banner {
+        margin-bottom: 22px;
+        padding: 12px 18px;
+      }
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1.08fr 0.92fr;
+        gap: 52px;
+        align-items: start;
+        position: relative;
+      }
+      /* 電腦版左右雙欄中間的垂直漸層髮絲分隔線 */
+      .dashboard-grid::before {
+        content: '';
+        position: absolute;
+        top: 8px;
+        bottom: 8px;
+        left: calc(53.8% + 2px);
+        width: 1px;
+        background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.09) 10%, rgba(255, 255, 255, 0.09) 90%, transparent);
+        pointer-events: none;
+      }
+      .layout-col-left .card:last-child::after {
+        display: none;
+      }
+      /* 電腦版車圖舞台等比例放大，但嚴格鎖定 16:10 確保充電孔與倒影 100% 精準對位 */
+      .tesla-stage-wrap {
+        max-width: 480px;
+      }
+      .gauge-card svg {
+        max-width: 190px;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="title">⚡ 車位充電監控站</div>
-    <div class="status-badge" id="statusBadge">待命中</div>
-  </div>
-
-  <!-- 訪客展示模式頂部橫幅（屋主解鎖後自動隱藏） -->
-  <div class="demo-banner" id="demoBanner">
-    <div class="demo-info">
-      <div class="demo-title">👀 訪客互動展示模式 (範例數據)</div>
-      <div class="demo-sub" id="demoScenarioText">目前模擬：🔵 n7 離峰充電中</div>
+  <div class="app-container">
+    <div class="header">
+      <div class="title">⚡ 車位充電監控站</div>
+      <div class="status-badge" id="statusBadge">待命中</div>
     </div>
-    <div class="demo-actions">
-      <button class="demo-btn" onclick="cycleDemoScenario()">🔄 切換情境</button>
-      <button class="demo-btn unlock" onclick="openPinModal()">🔐 屋主解鎖</button>
-    </div>
-  </div>
 
-  <!-- 屋主 PIN 碼驗證彈窗（含 3次30秒 / 6次3分鐘 階梯式防暴力破解鎖定） -->
-  <div class="pin-modal-overlay" id="pinModalOverlay">
-    <div class="pin-modal">
-      <h3>🔐 屋主身分驗證</h3>
-      <p>請輸入 4 位數專屬通行碼<br>解鎖後此手機將自動記憶通行證</p>
-      <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="pin-input" id="pinInput" placeholder="••••" oninput="onPinInput(this.value)" />
-      <div class="pin-error" id="pinError"></div>
-      <div class="pin-modal-btns">
-        <button class="pin-modal-btn" onclick="closePinModal()">取消</button>
-        <button class="pin-modal-btn confirm" id="pinConfirmBtn" onclick="verifyPin()">確認解鎖</button>
+    <!-- 訪客展示模式頂部橫幅（屋主解鎖後自動隱藏） -->
+    <div class="demo-banner" id="demoBanner">
+      <div class="demo-info">
+        <div class="demo-title">👀 訪客互動展示模式 (範例數據)</div>
+        <div class="demo-sub" id="demoScenarioText">目前模擬：🔵 n7 離峰充電中</div>
+      </div>
+      <div class="demo-actions">
+        <button class="demo-btn" onclick="cycleDemoScenario()">🔄 切換情境</button>
+        <button class="demo-btn unlock" onclick="openPinModal()">🔐 屋主解鎖</button>
       </div>
     </div>
-  </div>
 
-  <!-- 排程與電價時段倒數卡片 -->
-  <div class="card">
-    <div class="banner">
-      <span>📅 今日自動排程時段</span>
-      <b id="scheduleText">載入中...</b>
-    </div>
-    <div class="tou-box">
-      <div class="tou-header">
-        <span style="font-size: 13px; color: var(--text-sub);">⚡ 電價時段狀態</span>
-        <span class="tou-pill off-peak" id="touBadge">載入中...</span>
-      </div>
-      <div class="tou-countdown" id="touCountdown">⏳ 正在計算離峰倒數...</div>
-    </div>
-  </div>
-
-  <!-- 商用級 EMS 動態電力流向圖 -->
-  <div class="flow-card">
-    <div class="flow-node" id="flowGridNode">
-      <div class="flow-title" id="flowGridTitle">🟢 台電離峰電網</div>
-      <div class="flow-sub" id="flowGridSub">-- 元/度</div>
-    </div>
-    <div class="flow-line" id="flowLine1"></div>
-    <div class="flow-node" id="flowEvseNode">
-      <div class="flow-title">⚡ 16A 充電樁</div>
-      <div class="flow-sub" id="flowEvseSub">🔒 斷電上鎖待命</div>
-    </div>
-    <div class="flow-line" id="flowLine2"></div>
-    <div class="flow-node" id="flowCarNode">
-      <div class="flow-title" id="flowCarTitle">🚗 車輛</div>
-      <div class="flow-sub" id="flowCarSub">🅿️ 未插槍待命</div>
-    </div>
-  </div>
-
-  <!-- 特斯拉原廠 UI 風格：展間亮白聚光 + 全車底盤立體陰影 + 四輪貼地鏡面倒影 + 微型充電槍與自然垂墜加長綠光電流 -->
-  <div class="tesla-stage-card" id="teslaChargingStage">
-    <input type="file" id="carPhotoInput" accept="image/*" style="display: none;" onchange="onCarPhotoSelected(event)" />
-    <div class="tesla-stage-wrap">
-      <!-- 展間冷白背景聚光燈與地面反光 -->
-      <div class="tesla-studio-backlight"></div>
-      <div class="tesla-floor-glow"></div>
-
-      <!-- 全車底盤立體陰影畫布（置於 z-index: 2） -->
-      <canvas id="teslaUnderbodyShadow" class="tesla-underbody-shadow" width="1000" height="625"></canvas>
-
-      <!-- 鏡面倒影畫布（置於 z-index: 3） -->
-      <canvas id="teslaCarReflection" class="tesla-car-reflection" width="1000" height="625"></canvas>
-
-      <!-- 實車去背主圖層（直接讀取 GitHub 資料夾內的 n7.png / bria.png） -->
-      <img id="teslaCarMain" class="tesla-car-main" alt="Charging EV" onerror="onCarImageError()" onload="onCarImageLoad()" />
-
-      <!-- 微型立體充電槍與向左延伸超過車尾的自然垂墜綠色電流線 -->
-      <svg class="tesla-cable-svg" viewBox="0 0 400 250">
-        <defs>
-          <!-- 充電線末端漸層消散遮罩 -->
-          <linearGradient id="cableFadeGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#34d399" stop-opacity="0" />
-            <stop offset="12%" stop-color="#34d399" stop-opacity="0.82" />
-            <stop offset="100%" stop-color="#2dd4bf" stop-opacity="1" />
-          </linearGradient>
-          <!-- 微型充電槍立體金屬漸層 -->
-          <linearGradient id="plugBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#475569" />
-            <stop offset="45%" stop-color="#1e293b" />
-            <stop offset="100%" stop-color="#090d16" />
-          </linearGradient>
-        </defs>
-
-        <!-- 第一層：外圍寬柔光 -->
-        <path id="cableGlowWide" class="cable-glow-wide" d="M 30 182 C 72 172, 148 153, 162 143 C 167 139, 167 120, 165.5 101" stroke="url(#cableFadeGrad)" />
-        <!-- 第二層：中層光暈 -->
-        <path id="cableOuterGlow" class="cable-outer-glow" d="M 30 182 C 72 172, 148 153, 162 143 C 167 139, 167 120, 165.5 101" stroke="url(#cableFadeGrad)" />
-        <!-- 第三層：自然垂墜發光電纜細核心線 -->
-        <path id="cableMainLine" class="cable-main-line" d="M 30 182 C 72 172, 148 153, 162 143 C 167 139, 167 120, 165.5 101" stroke="url(#cableFadeGrad)" />
-        <!-- 第四層：從車尾左方順著電纜向上流進充電槍的細緻電流光點 -->
-        <path id="cableFlowPulse" class="cable-flow-pulse" d="M 40 179.5 C 78 170, 149 152, 162 143 C 167 139, 167 120, 165.5 101" />
-
-        <!-- 插入端：充電孔呼吸光暈與等比例微型充電槍頭 -->
-        <circle id="portHaloPulse" class="port-halo-pulse" cx="166" cy="95" r="3" fill="none" stroke="#34d399" stroke-width="1.6" />
-        <circle id="portCoreGlow" cx="166" cy="95" r="2.6" fill="#34d399" opacity="0.85" />
-
-        <!-- 微型充電槍頭群組（動態對位至 n7 或 Bria 充電孔） -->
-        <g id="chargingGunGroup" transform="translate(166, 95)">
-          <ellipse cx="0.8" cy="-0.4" rx="2.4" ry="2.8" fill="#090d16" stroke="#334155" stroke-width="0.5" />
-          <path d="M 1.2 -1.6 C -1.2 -1.8, -3.2 -0.2, -3.0 2.2 C -2.8 3.8, -1.8 5.2, -0.5 6.4 L 1.4 5.8 C 0.6 4.4, 0.2 2.8, 0.6 1.2 C 0.9 0.2, 1.5 -0.6, 1.2 -1.6 Z" fill="url(#plugBodyGrad)" stroke="#64748b" stroke-width="0.45" />
-          <path d="M 0.8 -1.2 C -1.0 -1.2, -2.3 0.2, -2.1 2.2" fill="none" stroke="#cbd5e1" stroke-width="0.45" stroke-linecap="round" opacity="0.8" />
-          <circle cx="-1.2" cy="1.2" r="0.75" fill="#4ade80" />
-        </g>
-      </svg>
-
-      <!-- 僅在 GitHub 所有候選檔名皆找不到時才顯示的備用提示 -->
-      <div class="tesla-missing-tip" id="teslaMissingTip" onclick="promptCarPhotoUpload()">
-        <div style="font-size: 13px; font-weight: 700; color: #38bdf8; margin-bottom: 4px;" id="missingTipTitle">📸 尚未偵測到 GitHub 車輛圖檔</div>
-        <div style="font-size: 11.5px; color: var(--text-sub); line-height: 1.45;">
-          請確認 GitHub 資料夾內有 <b>n7.png</b> 與 <b>bria.png</b><br>
-          或點此直接從裝置選擇去背照片預覽
+    <!-- 屋主 PIN 碼驗證彈窗（含 3次30秒 / 6次3分鐘 階梯式防暴力破解鎖定） -->
+    <div class="pin-modal-overlay" id="pinModalOverlay">
+      <div class="pin-modal">
+        <h3>🔐 屋主身分驗證</h3>
+        <p>請輸入 4 位數專屬通行碼<br>解鎖後此裝置將自動記憶通行證</p>
+        <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="pin-input" id="pinInput" placeholder="••••" oninput="onPinInput(this.value)" />
+        <div class="pin-error" id="pinError"></div>
+        <div class="pin-modal-btns">
+          <button class="pin-modal-btn" onclick="closePinModal()">取消</button>
+          <button class="pin-modal-btn confirm" id="pinConfirmBtn" onclick="verifyPin()">確認解鎖</button>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- HA 原生質感雙儀表盤：即時充電功率與即時充電電流 -->
-  <div class="gauges">
-    <!-- 功率儀表 -->
-    <div class="gauge-card">
-      <svg viewBox="0 0 200 120">
-        <defs>
-          <linearGradient id="gaugePowerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#22c55e" />
-            <stop offset="50%" stop-color="#22c55e" />
-            <stop offset="72%" stop-color="#eab308" />
-            <stop offset="92%" stop-color="#ef4444" />
-          </linearGradient>
-        </defs>
-        <path d="M 25 105 A 75 75 0 0 1 175 105" fill="none" stroke="#27272a" stroke-width="16" stroke-linecap="round" />
-        <path d="M 25 105 A 75 75 0 0 1 175 105" fill="none" stroke="url(#gaugePowerGrad)" stroke-width="16" stroke-linecap="round" opacity="0.95" />
-        <g id="needlePower" style="transform-origin: 100px 105px; transform: rotate(-90deg); transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);">
-          <polygon points="98.5,105 101.5,105 100,34" fill="#f8fafc" />
-          <circle cx="100" cy="105" r="6" fill="#f59e0b" stroke="#1c1d22" stroke-width="2" />
-        </g>
-        <text id="powerVal" x="100" y="94" text-anchor="middle" font-size="21" font-weight="700" fill="#ffffff" style="paint-order: stroke fill; stroke: #1c1d22; stroke-width: 4px; stroke-linejoin: round;">
-          0.00 <tspan font-size="12" font-weight="500" fill="#9ca3af" stroke="none">kW</tspan>
-        </text>
-      </svg>
-      <div class="label">即時充電功率</div>
-      <div class="gauge-sub" id="voltageSub">⚡ 線路狀態：<b>待命 (0V)</b></div>
-    </div>
-
-    <!-- 電流儀表 -->
-    <div class="gauge-card">
-      <svg viewBox="0 0 200 120">
-        <defs>
-          <linearGradient id="gaugeCurrentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#22c55e" />
-            <stop offset="50%" stop-color="#22c55e" />
-            <stop offset="75%" stop-color="#eab308" />
-            <stop offset="95%" stop-color="#ef4444" />
-          </linearGradient>
-        </defs>
-        <path d="M 25 105 A 75 75 0 0 1 175 105" fill="none" stroke="#27272a" stroke-width="16" stroke-linecap="round" />
-        <path d="M 25 105 A 75 75 0 0 1 175 105" fill="none" stroke="url(#gaugeCurrentGrad)" stroke-width="16" stroke-linecap="round" opacity="0.95" />
-        <g id="needleCurrent" style="transform-origin: 100px 105px; transform: rotate(-90deg); transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);">
-          <polygon points="98.5,105 101.5,105 100,34" fill="#f8fafc" />
-          <circle cx="100" cy="105" r="6" fill="#f59e0b" stroke="#1c1d22" stroke-width="2" />
-        </g>
-        <text id="currentVal" x="100" y="94" text-anchor="middle" font-size="21" font-weight="700" fill="#ffffff" style="paint-order: stroke fill; stroke: #1c1d22; stroke-width: 4px; stroke-linejoin: round;">
-          0.00 <tspan font-size="12" font-weight="500" fill="#9ca3af" stroke="none">A</tspan>
-        </text>
-      </svg>
-      <div class="label">即時充電電流</div>
-      <div class="gauge-sub" id="loadSub">🛡️ 送審規格：<b>16A (斷路器20A)</b></div>
-    </div>
-  </div>
-
-  <!-- 本次充電工作數據 -->
-  <div class="card">
-    <div class="list-title">本次充電工作數據</div>
-    <div class="row"><span class="name">本次充電車輛</span><span class="value" id="vehicleName">-</span></div>
-    <div class="row" style="align-items: flex-start;">
-      <span class="name" style="padding-top: 2px;">本次充電時段</span>
-      <div class="value" id="sessionTime" style="font-size: 13px; line-height: 1.45;">-</div>
-    </div>
-    <div class="row"><span class="name">本次充電時長</span><span class="value" id="sessionDuration">-</span></div>
-    <div class="row"><span class="name">本次充入電量</span><span class="value" id="sessionEnergy">0.00 kWh</span></div>
-    <div class="row"><span class="name">預估補充續航<span class="sub-note">(6 km/度)</span></span><span class="value" id="sessionKm" style="color: #38bdf8;">約 +0 km</span></div>
-    <div class="row"><span class="name">當前台電費率</span><span class="value" id="rateVal">- 元/度</span></div>
-    <div class="row"><span class="name">本次充電費用</span><span class="value highlight" id="sessionCost">0.0 元</span></div>
-  </div>
-
-  <!-- 當月累計與節費統計 -->
-  <div class="card">
-    <div class="list-title">📅 當月累計與節費統計</div>
-    <div class="row"><span class="name">本月充電總量</span><span class="value" id="monthEnergy">0.0 kWh</span></div>
-    <div class="row"><span class="name">本月充電總電費</span><span class="value highlight" id="monthCost">0.0 元</span></div>
-    <div class="row"><span class="name">本月平均每度電價</span><span class="value" id="avgRateVal" style="color: #d4d4d8;">0.00 元/度</span></div>
-    <div class="row"><span class="name">本月累計補充續航<span class="sub-note">(6 km/度)</span></span><span class="value" id="monthKm" style="color: #38bdf8;">約 +0 km</span></div>
-    <div class="row"><span class="name">折合油車等效油耗<span class="sub-note">(95無鉛 30元/L)</span></span><span class="value" id="equivKmL" style="color: #4ade80;">🔥 相當於 0.0 km/L</span></div>
-    <div class="row"><span class="name">同度數超充站電費<span class="sub-note">(6.5 元/度)</span></span><span class="value" id="dcCost" style="color: var(--text-sub);">約 NT$ 0 元</span></div>
-    <div class="row"><span class="name">同里程燃油車油資<span class="sub-note">(12.5 km/L)</span></span><span class="value" id="gasCost" style="color: var(--text-sub);">約 NT$ 0 元</span></div>
-    <div class="row"><span class="name">本月相比超充省下</span><span class="save-badge-dc" id="savedDcMoney">⚡ 淨省 NT$ 0 元</span></div>
-    <div class="row"><span class="name">本月相比油車省下</span><span class="save-badge" id="savedMoney">💰 淨省 NT$ 0 元</span></div>
-  </div>
-
-  <!-- 歷史充電紀錄明細卡片 -->
-  <div class="card" style="margin-top: 16px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 4px; margin-bottom: 12px;">
-      <div style="display: flex; align-items: baseline; gap: 4px; white-space: nowrap;">
-        <span style="font-weight: 600; font-size: 15px;">📋 歷史充電帳單</span>
-        <span style="font-size: 11px; color: var(--text-sub);" id="history-count">0 筆</span>
-      </div>
-      <div class="filter-group">
-        <select id="carFilter" class="filter-select" onchange="onFilterChange()">
-          <option value="all">全部車款</option>
-          <option value="bria">🟢 Bria</option>
-          <option value="n7">🔵 n7</option>
-        </select>
-        <select id="monthFilter" class="filter-select" onchange="onFilterChange()">
-          <option value="all">全部月份</option>
-        </select>
-        <button class="csv-btn" onclick="exportCSV()">📥 匯出</button>
-      </div>
-    </div>
-
-    <!-- 雙車款分帳統計與比例條 -->
-    <div class="split-box" id="splitSummaryBox">
-      <div class="split-header">
-        <span id="splitPeriodLabel">📊 雙車款用電與費用分帳 (全部月份)</span>
-        <span id="splitTotalCount">共 0 次充電</span>
-      </div>
-      <div class="split-bar-bg">
-        <div class="split-bar-bria" id="barBria" style="width: 50%;"></div>
-        <div class="split-bar-n7" id="barN7" style="width: 50%;"></div>
-      </div>
-      <div class="split-grid">
-        <div class="split-item bria">
-          <div class="split-car-title">
-            <span style="color: #4ade80;">🟢 Foxtron Bria</span>
-            <span id="briaPct" style="color: var(--text-sub);">0%</span>
+    <!-- 主內容區：手機直式單欄 / 電腦自動雙欄座艙 -->
+    <div class="dashboard-grid">
+      <!-- ==================== 左欄（手機上半部）：即時監控、3D 車輛舞台與本次數據 ==================== -->
+      <div class="layout-col-left">
+        <!-- 排程與電價時段倒數 -->
+        <div class="card">
+          <div class="banner">
+            <span>📅 今日自動排程時段</span>
+            <b id="scheduleText">載入中...</b>
           </div>
-          <div class="split-stat-line"><span>累計電量</span><b id="briaEnergy">0.0 kWh</b></div>
-          <div class="split-stat-line"><span>累計費用</span><b id="briaCost" class="highlight">NT$ 0.0</b></div>
-        </div>
-        <div class="split-item n7">
-          <div class="split-car-title">
-            <span style="color: #38bdf8;">🔵 Luxgen n7</span>
-            <span id="n7Pct" style="color: var(--text-sub);">0%</span>
+          <div class="tou-box">
+            <div class="tou-header">
+              <span style="font-size: 13px; color: var(--text-sub);">⚡ 電價時段狀態</span>
+              <span class="tou-pill off-peak" id="touBadge">載入中...</span>
+            </div>
+            <div class="tou-countdown" id="touCountdown">⏳ 正在計算離峰倒數...</div>
           </div>
-          <div class="split-stat-line"><span>累計電量</span><b id="n7Energy">0.0 kWh</b></div>
-          <div class="split-stat-line"><span>累計費用</span><b id="n7Cost" class="highlight">NT$ 0.0</b></div>
+        </div>
+
+        <!-- 商用級 EMS 動態電力流向圖 -->
+        <div class="flow-card">
+          <div class="flow-node" id="flowGridNode">
+            <div class="flow-title" id="flowGridTitle">🟢 台電離峰電網</div>
+            <div class="flow-sub" id="flowGridSub">-- 元/度</div>
+          </div>
+          <div class="flow-line" id="flowLine1"></div>
+          <div class="flow-node" id="flowEvseNode">
+            <div class="flow-title">⚡ 16A 充電樁</div>
+            <div class="flow-sub" id="flowEvseSub">🔒 斷電上鎖待命</div>
+          </div>
+          <div class="flow-line" id="flowLine2"></div>
+          <div class="flow-node" id="flowCarNode">
+            <div class="flow-title" id="flowCarTitle">🚗 車輛</div>
+            <div class="flow-sub" id="flowCarSub">🅿️ 未插槍待命</div>
+          </div>
+        </div>
+
+        <!-- 特斯拉原廠 UI 風格：展間亮白聚光 + 全車底盤立體陰影 + 四輪貼地鏡面倒影 + 微型充電槍與自然垂墜加長綠光電流 -->
+        <div class="tesla-stage-card" id="teslaChargingStage">
+          <input type="file" id="carPhotoInput" accept="image/*" style="display: none;" onchange="onCarPhotoSelected(event)" />
+          <div class="tesla-stage-wrap">
+            <!-- 展間冷白背景聚光燈與地面反光 -->
+            <div class="tesla-studio-backlight"></div>
+            <div class="tesla-floor-glow"></div>
+
+            <!-- 全車底盤立體陰影畫布（置於 z-index: 2） -->
+            <canvas id="teslaUnderbodyShadow" class="tesla-underbody-shadow" width="1000" height="625"></canvas>
+
+            <!-- 鏡面倒影畫布（置於 z-index: 3） -->
+            <canvas id="teslaCarReflection" class="tesla-car-reflection" width="1000" height="625"></canvas>
+
+            <!-- 實車去背主圖層（直接讀取 GitHub 資料夾內的 n7.png / bria.png） -->
+            <img id="teslaCarMain" class="tesla-car-main" alt="Charging EV" onerror="onCarImageError()" onload="onCarImageLoad()" />
+
+            <!-- 微型立體充電槍與向左延伸超過車尾的自然垂墜綠色電流線 -->
+            <svg class="tesla-cable-svg" viewBox="0 0 400 250">
+              <defs>
+                <!-- 充電線末端漸層消散遮罩 -->
+                <linearGradient id="cableFadeGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#34d399" stop-opacity="0" />
+                  <stop offset="12%" stop-color="#34d399" stop-opacity="0.82" />
+                  <stop offset="100%" stop-color="#2dd4bf" stop-opacity="1" />
+                </linearGradient>
+                <!-- 微型充電槍立體金屬漸層 -->
+                <linearGradient id="plugBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#475569" />
+                  <stop offset="45%" stop-color="#1e293b" />
+                  <stop offset="100%" stop-color="#090d16" />
+                </linearGradient>
+              </defs>
+
+              <!-- 第一層：外圍寬柔光 -->
+              <path id="cableGlowWide" class="cable-glow-wide" d="M 30 182 C 72 172, 148 153, 162 143 C 167 139, 167 120, 165.5 101" stroke="url(#cableFadeGrad)" />
+              <!-- 第二層：中層光暈 -->
+              <path id="cableOuterGlow" class="cable-outer-glow" d="M 30 182 C 72 172, 148 153, 162 143 C 167 139, 167 120, 165.5 101" stroke="url(#cableFadeGrad)" />
+              <!-- 第三層：自然垂墜發光電纜細核心線 -->
+              <path id="cableMainLine" class="cable-main-line" d="M 30 182 C 72 172, 148 153, 162 143 C 167 139, 167 120, 165.5 101" stroke="url(#cableFadeGrad)" />
+              <!-- 第四層：從車尾左方順著電纜向上流進充電槍的細緻電流光點 -->
+              <path id="cableFlowPulse" class="cable-flow-pulse" d="M 40 179.5 C 78 170, 149 152, 162 143 C 167 139, 167 120, 165.5 101" />
+
+              <!-- 插入端：充電孔呼吸光暈與等比例微型充電槍頭 -->
+              <circle id="portHaloPulse" class="port-halo-pulse" cx="166" cy="95" r="3" fill="none" stroke="#34d399" stroke-width="1.6" />
+              <circle id="portCoreGlow" cx="166" cy="95" r="2.6" fill="#34d399" opacity="0.85" />
+
+              <!-- 微型充電槍頭群組（動態對位至 n7 或 Bria 充電孔） -->
+              <g id="chargingGunGroup" transform="translate(166, 95)">
+                <ellipse cx="0.8" cy="-0.4" rx="2.4" ry="2.8" fill="#090d16" stroke="#334155" stroke-width="0.5" />
+                <path d="M 1.2 -1.6 C -1.2 -1.8, -3.2 -0.2, -3.0 2.2 C -2.8 3.8, -1.8 5.2, -0.5 6.4 L 1.4 5.8 C 0.6 4.4, 0.2 2.8, 0.6 1.2 C 0.9 0.2, 1.5 -0.6, 1.2 -1.6 Z" fill="url(#plugBodyGrad)" stroke="#64748b" stroke-width="0.45" />
+                <path d="M 0.8 -1.2 C -1.0 -1.2, -2.3 0.2, -2.1 2.2" fill="none" stroke="#cbd5e1" stroke-width="0.45" stroke-linecap="round" opacity="0.8" />
+                <circle cx="-1.2" cy="1.2" r="0.75" fill="#4ade80" />
+              </g>
+            </svg>
+
+            <!-- 僅在 GitHub 所有候選檔名皆找不到時才顯示的備用提示 -->
+            <div class="tesla-missing-tip" id="teslaMissingTip" onclick="promptCarPhotoUpload()">
+              <div style="font-size: 13px; font-weight: 700; color: #38bdf8; margin-bottom: 4px;" id="missingTipTitle">📸 尚未偵測到 GitHub 車輛圖檔</div>
+              <div style="font-size: 11.5px; color: var(--text-sub); line-height: 1.45;">
+                請確認 GitHub 資料夾內有 <b>n7.png</b> 與 <b>bria.png</b><br>
+                或點此直接從裝置選擇去背照片預覽
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 無邊框雙儀表盤：即時充電功率與即時充電電流 -->
+        <div class="gauges">
+          <!-- 功率儀表 -->
+          <div class="gauge-card">
+            <svg viewBox="0 0 200 120">
+              <defs>
+                <linearGradient id="gaugePowerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#22c55e" />
+                  <stop offset="50%" stop-color="#22c55e" />
+                  <stop offset="72%" stop-color="#eab308" />
+                  <stop offset="92%" stop-color="#ef4444" />
+                </linearGradient>
+              </defs>
+              <path d="M 25 105 A 75 75 0 0 1 175 105" fill="none" stroke="#27272a" stroke-width="16" stroke-linecap="round" />
+              <path d="M 25 105 A 75 75 0 0 1 175 105" fill="none" stroke="url(#gaugePowerGrad)" stroke-width="16" stroke-linecap="round" opacity="0.95" />
+              <g id="needlePower" style="transform-origin: 100px 105px; transform: rotate(-90deg); transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);">
+                <polygon points="98.5,105 101.5,105 100,34" fill="#f8fafc" />
+                <circle cx="100" cy="105" r="6" fill="#f59e0b" stroke="#121316" stroke-width="2" />
+              </g>
+              <text id="powerVal" x="100" y="94" text-anchor="middle" font-size="21" font-weight="700" fill="#ffffff" style="paint-order: stroke fill; stroke: #121316; stroke-width: 4px; stroke-linejoin: round;">
+                0.00 <tspan font-size="12" font-weight="500" fill="#9ca3af" stroke="none">kW</tspan>
+              </text>
+            </svg>
+            <div class="label">即時充電功率</div>
+            <div class="gauge-sub" id="voltageSub">⚡ 線路狀態：<b>待命 (0V)</b></div>
+          </div>
+
+          <!-- 電流儀表 -->
+          <div class="gauge-card">
+            <svg viewBox="0 0 200 120">
+              <defs>
+                <linearGradient id="gaugeCurrentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#22c55e" />
+                  <stop offset="50%" stop-color="#22c55e" />
+                  <stop offset="75%" stop-color="#eab308" />
+                  <stop offset="95%" stop-color="#ef4444" />
+                </linearGradient>
+              </defs>
+              <path d="M 25 105 A 75 75 0 0 1 175 105" fill="none" stroke="#27272a" stroke-width="16" stroke-linecap="round" />
+              <path d="M 25 105 A 75 75 0 0 1 175 105" fill="none" stroke="url(#gaugeCurrentGrad)" stroke-width="16" stroke-linecap="round" opacity="0.95" />
+              <g id="needleCurrent" style="transform-origin: 100px 105px; transform: rotate(-90deg); transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);">
+                <polygon points="98.5,105 101.5,105 100,34" fill="#f8fafc" />
+                <circle cx="100" cy="105" r="6" fill="#f59e0b" stroke="#121316" stroke-width="2" />
+              </g>
+              <text id="currentVal" x="100" y="94" text-anchor="middle" font-size="21" font-weight="700" fill="#ffffff" style="paint-order: stroke fill; stroke: #121316; stroke-width: 4px; stroke-linejoin: round;">
+                0.00 <tspan font-size="12" font-weight="500" fill="#9ca3af" stroke="none">A</tspan>
+              </text>
+            </svg>
+            <div class="label">即時充電電流</div>
+            <div class="gauge-sub" id="loadSub">🛡️ 送審規格：<b>16A (斷路器20A)</b></div>
+          </div>
+        </div>
+
+        <!-- 本次充電工作數據 -->
+        <div class="card">
+          <div class="list-title">⚡ 本次充電工作數據</div>
+          <div class="row"><span class="name">本次充電車輛</span><span class="value" id="vehicleName">-</span></div>
+          <div class="row" style="align-items: flex-start;">
+            <span class="name" style="padding-top: 2px;">本次充電時段</span>
+            <div class="value" id="sessionTime" style="font-size: 13px; line-height: 1.45;">-</div>
+          </div>
+          <div class="row"><span class="name">本次充電時長</span><span class="value" id="sessionDuration">-</span></div>
+          <div class="row"><span class="name">本次充入電量</span><span class="value" id="sessionEnergy">0.00 kWh</span></div>
+          <div class="row"><span class="name">預估補充續航<span class="sub-note">(6 km/度)</span></span><span class="value" id="sessionKm" style="color: #38bdf8;">約 +0 km</span></div>
+          <div class="row"><span class="name">當前台電費率</span><span class="value" id="rateVal">- 元/度</span></div>
+          <div class="row"><span class="name">本次充電費用</span><span class="value highlight" id="sessionCost">0.0 元</span></div>
+        </div>
+      </div>
+
+      <!-- ==================== 右欄（手機下半部）：當月效益統計、雙車分帳與歷史帳單 ==================== -->
+      <div class="layout-col-right">
+        <!-- 當月累計與節費統計 -->
+        <div class="card">
+          <div class="list-title">📅 當月累計與節費統計</div>
+          <div class="row"><span class="name">本月充電總量</span><span class="value" id="monthEnergy">0.0 kWh</span></div>
+          <div class="row"><span class="name">本月充電總電費</span><span class="value highlight" id="monthCost">0.0 元</span></div>
+          <div class="row"><span class="name">本月平均每度電價</span><span class="value" id="avgRateVal" style="color: #d4d4d8;">0.00 元/度</span></div>
+          <div class="row"><span class="name">本月累計補充續航<span class="sub-note">(6 km/度)</span></span><span class="value" id="monthKm" style="color: #38bdf8;">約 +0 km</span></div>
+          <div class="row"><span class="name">折合油車等效油耗<span class="sub-note">(95無鉛 30元/L)</span></span><span class="value" id="equivKmL" style="color: #4ade80;">🔥 相當於 0.0 km/L</span></div>
+          <div class="row"><span class="name">同度數超充站電費<span class="sub-note">(6.5 元/度)</span></span><span class="value" id="dcCost" style="color: var(--text-sub);">約 NT$ 0 元</span></div>
+          <div class="row"><span class="name">同里程燃油車油資<span class="sub-note">(12.5 km/L)</span></span><span class="value" id="gasCost" style="color: var(--text-sub);">約 NT$ 0 元</span></div>
+          <div class="row"><span class="name">本月相比超充省下</span><span class="save-badge-dc" id="savedDcMoney">⚡ 淨省 NT$ 0 元</span></div>
+          <div class="row"><span class="name">本月相比油車省下</span><span class="save-badge" id="savedMoney">💰 淨省 NT$ 0 元</span></div>
+        </div>
+
+        <!-- 歷史充電紀錄明細區塊 -->
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 4px; margin-bottom: 14px;">
+            <div style="display: flex; align-items: baseline; gap: 6px; white-space: nowrap;">
+              <span style="font-weight: 700; font-size: 15px; color: #cbd5e1;">📋 歷史充電帳單</span>
+              <span style="font-size: 11px; color: var(--text-sub);" id="history-count">0 筆</span>
+            </div>
+            <div class="filter-group">
+              <select id="carFilter" class="filter-select" onchange="onFilterChange()">
+                <option value="all">全部車款</option>
+                <option value="bria">🟢 Bria</option>
+                <option value="n7">🔵 n7</option>
+              </select>
+              <select id="monthFilter" class="filter-select" onchange="onFilterChange()">
+                <option value="all">全部月份</option>
+              </select>
+              <button class="csv-btn" onclick="exportCSV()">📥 匯出</button>
+            </div>
+          </div>
+
+          <!-- 雙車款分帳統計與比例條 -->
+          <div class="split-box" id="splitSummaryBox">
+            <div class="split-header">
+              <span id="splitPeriodLabel">📊 雙車款用電與費用分帳 (全部月份)</span>
+              <span id="splitTotalCount">共 0 次充電</span>
+            </div>
+            <div class="split-bar-bg">
+              <div class="split-bar-bria" id="barBria" style="width: 50%;"></div>
+              <div class="split-bar-n7" id="barN7" style="width: 50%;"></div>
+            </div>
+            <div class="split-grid">
+              <div class="split-item bria">
+                <div class="split-car-title">
+                  <span style="color: #4ade80;">🟢 Foxtron Bria</span>
+                  <span id="briaPct" style="color: var(--text-sub);">0%</span>
+                </div>
+                <div class="split-stat-line"><span>累計電量</span><b id="briaEnergy">0.0 kWh</b></div>
+                <div class="split-stat-line"><span>累計費用</span><b id="briaCost" class="highlight">NT$ 0.0</b></div>
+              </div>
+              <div class="split-item n7">
+                <div class="split-car-title">
+                  <span style="color: #38bdf8;">🔵 Luxgen n7</span>
+                  <span id="n7Pct" style="color: var(--text-sub);">0%</span>
+                </div>
+                <div class="split-stat-line"><span>累計電量</span><b id="n7Energy">0.0 kWh</b></div>
+                <div class="split-stat-line"><span>累計費用</span><b id="n7Cost" class="highlight">NT$ 0.0</b></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="history-list" style="display: flex; flex-direction: column;">
+            <div style="text-align: center; color: var(--text-sub); font-size: 13px; padding: 12px 0;">
+              讀取歷史紀錄中...
+            </div>
+          </div>
+          <button id="toggleHistoryBtn" class="toggle-btn" style="display: none;" onclick="toggleHistoryExpand()">
+            ▼ 展開全部紀錄
+          </button>
         </div>
       </div>
     </div>
 
-    <div id="history-list" style="display: flex; flex-direction: column; gap: 10px;">
-      <div style="text-align: center; color: var(--text-sub); font-size: 13px; padding: 12px 0;">
-        讀取歷史紀錄中...
-      </div>
+    <div class="footer" id="footerBar">
+      <span class="pulse" id="syncPulse"></span>
+      <span id="syncStatusText">雲端即時同步中</span> • <span id="updateTime">-</span>
+      <span class="mode-switch-link" id="modeSwitchBtn" onclick="onFooterModeSwitch()">🎮 切換展示</span>
     </div>
-    <button id="toggleHistoryBtn" class="toggle-btn" style="display: none;" onclick="toggleHistoryExpand()">
-      ▼ 展開全部紀錄
-    </button>
-  </div>
-
-  <div class="footer" id="footerBar">
-    <span class="pulse" id="syncPulse"></span>
-    <span id="syncStatusText">雲端即時同步中</span> • <span id="updateTime">-</span>
-    <span class="mode-switch-link" id="modeSwitchBtn" onclick="onFooterModeSwitch()">🎮 切換展示</span>
   </div>
 
   <script>
@@ -859,7 +1074,7 @@
       return 'car-badge car-default';
     }
 
-    // ==================== 【雙車款獨立倒影與陰影參數調整區】 ====================
+    // ==================== 【雙車款獨立倒影與陰影參數調整區（100% 原數值保留）】 ====================
     const REFL_CONFIG = {
       // 🔵 Luxgen n7 專屬參數（已鎖定最佳數值）
       n7: {
@@ -877,39 +1092,14 @@
 
       // 🟢 Foxtron Bria 專屬參數（已鎖定最佳數值）
       bria: {
-        // 1. 整體倒影上下移動
-        //    👉 數字調大 (例如 6、10)：整片倒影一起「往下移動」
-        //    👉 數字調小 (例如 0、-4)：整片倒影一起「往上移動」
         moveDown: 4,
-
-        // 2. 左側倒影距離：後輪與左側車門
-        //    👉 數字調大 (例如 4、8)  ：左側與後輪倒影「往下拉開距離」
-        //    👉 數字調小 (例如 -3、-6)：左側與後輪倒影「往上貼近後輪」
         leftSideGap: 2,
-
-        // 3. 左側斜度：後輪 ↔ 中間前輪對齊角度 (度)
-        //    👉 數字調大 (例如 15、18)：左端(後輪)倒影「往左上提」
-        //    👉 數字調小 (例如 10、8) ：左端(後輪)倒影「往左下壓」
         leftTiltDeg: 16,
-
-        // 4. 右側倒影距離：車頭前保桿與右前輪
-        //    👉 數字調大 (例如 10、15)：車頭前保桿倒影「往下退開、離前保桿更遠」
-        //    👉 數字調小 (例如 4、0)  ：車頭前保桿倒影「往上靠近前保桿」
         rightSideGap: 9,
-
-        // 5. 右側斜度：中間前輪 ↔ 車頭前保桿對齊角度 (度)
-        //    👉 數字調大 (例如 8、10) ：車頭最右端倒影「往右上翹起」
-        //    👉 數字調小 (例如 2、0)  ：車頭最右端倒影「往右下壓低(遠離前保桿)」
         rightTiltDeg: 7.0,
-
-        // 6. 左右分界中心點 (預設 0.58)
         pivotXRatio: 0.58,
-
-        // 7. 倒影垂直延伸長度比例 (預設 0.68) 與漸層消散長度 (預設 0.52)
         scaleY: 0.68,
         fadeHeightRatio: 0.52,
-
-        // 8. 全車底盤陰影濃度 (0 ~ 1) 與往下擴散高度 (px)
         shadowOpacity: 0.95,
         shadowSpreadY: 100
       }
@@ -1662,7 +1852,7 @@
       URL.revokeObjectURL(url);
     }
 
-    // 渲染雙車款分帳統計與歷史帳單清單
+    // 渲染雙車款分帳統計與無邊框歷史帳單清單
     function renderHistory() {
       const listEl = document.getElementById('history-list');
       const countEl = document.getElementById('history-count');
@@ -1726,17 +1916,17 @@
       listEl.innerHTML = visibleRecords.map(item => {
         const carName = item.vehicle || '電動車';
         return `
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <div class="history-item-frameless">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
             <span style="font-family: monospace; font-size: 12px; color: var(--text-sub);">${item.order_id || '工單'}</span>
             <span class="${getVehicleBadgeClass(carName)}">
               ${carName}
             </span>
           </div>
-          <div style="font-size: 12px; color: var(--text-sub); margin-bottom: 8px;">
+          <div style="font-size: 12px; color: var(--text-sub); margin-bottom: 7px;">
             ${(item.start_end || item.created_at || '--').replace(/-/g, '/')}
           </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border); padding-top: 8px; font-size: 13px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
             <div><span style="color: var(--text-sub);">電量: </span><b>${item.energy !== undefined ? Number(item.energy).toFixed(2) + ' kWh' : '--'}</b></div>
             <div><span style="color: var(--text-sub);">時長: </span><b>${item.duration || '--'}</b></div>
             <div style="color: var(--warning); font-weight: 700; font-size: 14px;">NT$ ${item.cost !== undefined ? Number(item.cost).toFixed(1) : '--'}</div>
