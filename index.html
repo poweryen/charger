@@ -79,7 +79,7 @@
     .flow-line.charging::after { content: ''; position: absolute; top: 0; left: -35%; width: 35%; height: 100%; background: linear-gradient(90deg, transparent, #4ade80, transparent); animation: flowAnim 1.1s linear infinite; }
     @keyframes flowAnim { 0% { left: -35%; } 100% { left: 100%; } }
 
-    /* ==================== 特斯拉原廠 UI 風格：展間白光背光 + 全車底盤陰影 + 四輪對齊鏡面倒影 ==================== */
+    /* ==================== 特斯拉原廠 UI 風格：無 CSS Filter 純像素級渲染（根除 iOS 局部重繪方框破圖） ==================== */
     .tesla-stage-card {
       display: none;
       position: relative;
@@ -93,6 +93,7 @@
       border: 1px solid var(--border);
       box-shadow: 0 10px 28px rgba(0,0,0,0.55);
       overflow: hidden;
+      isolation: isolate;
       user-select: none;
       -webkit-user-select: none;
     }
@@ -107,15 +108,14 @@
       margin: 0 auto;
     }
 
-    /* 背景與地板交界處的明亮冷白聚光燈 */
+    /* 背景與地板交界處的明亮冷白聚光燈（純漸層無 CSS filter） */
     .tesla-studio-backlight {
       position: absolute;
-      left: 6%;
-      right: 6%;
-      top: 14%;
-      height: 58%;
-      background: radial-gradient(ellipse 62% 50% at 50% 52%, rgba(255, 255, 255, 0.24) 0%, rgba(203, 213, 225, 0.10) 45%, transparent 76%);
-      filter: blur(8px);
+      left: 2%;
+      right: 2%;
+      top: 10%;
+      height: 64%;
+      background: radial-gradient(ellipse 65% 52% at 50% 52%, rgba(255, 255, 255, 0.22) 0%, rgba(203, 213, 225, 0.09) 46%, transparent 78%);
       pointer-events: none;
       z-index: 1;
     }
@@ -132,26 +132,24 @@
       z-index: 1;
     }
 
-    /* 全車底盤立體壓地陰影畫布（置於 z-index: 2，緊貼車底與四輪，不遮擋倒影） */
+    /* 全車底盤立體壓地陰影畫布（柔焦已直接烘焙於 Canvas 像素中，無 CSS filter） */
     .tesla-underbody-shadow {
       position: absolute;
       inset: 0;
       width: 100%;
       height: 100%;
       opacity: 0.95;
-      filter: blur(5.5px);
       pointer-events: none;
       z-index: 2;
     }
 
-    /* 四輪貼合鏡面倒影畫布（置於 z-index: 3） */
+    /* 四輪貼合鏡面倒影畫布（柔焦與暗化已直接烘焙於 Canvas 像素中，無 CSS filter） */
     .tesla-car-reflection {
       position: absolute;
       inset: 0;
       width: 100%;
       height: 100%;
       opacity: 0.40;
-      filter: blur(1.8px) brightness(0.80) contrast(1.12);
       pointer-events: none;
       z-index: 3;
     }
@@ -169,7 +167,7 @@
       z-index: 4;
     }
 
-    /* 充電槍與自然垂墜綠色電流線 SVG 覆蓋層（採用純向量多層次光暈，解決 iOS Safari 濾鏡方框破圖） */
+    /* 充電槍與自然垂墜綠色電流線 SVG 覆蓋層（獨立 GPU 圖層，徹底防止 iOS 局部重繪印出方框） */
     .tesla-cable-svg {
       position: absolute;
       inset: 0;
@@ -178,6 +176,10 @@
       pointer-events: none;
       z-index: 5;
       overflow: visible;
+      transform: translate3d(0, 0, 0);
+      -webkit-transform: translate3d(0, 0, 0);
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
     }
     .cable-glow-wide {
       fill: none;
@@ -205,11 +207,11 @@
       stroke: #ecfdf5;
       stroke-width: 1.75;
       stroke-linecap: round;
-      stroke-dasharray: 7 22;
-      animation: teslaCableFlow 0.75s linear infinite;
+      stroke-dasharray: 8 24;
+      animation: teslaCableFlow 0.8s linear infinite;
     }
     @keyframes teslaCableFlow {
-      from { stroke-dashoffset: 29; }
+      from { stroke-dashoffset: 32; }
       to { stroke-dashoffset: 0; }
     }
     .port-halo-pulse {
@@ -361,7 +363,7 @@
     </div>
   </div>
 
-  <!-- 特斯拉原廠 UI 風格：展間亮白聚光 + 全車底盤立體陰影 + 四輪貼地鏡面倒影 + 微型充電槍與自然垂墜綠光電流 -->
+  <!-- 特斯拉原廠 UI 風格：展間亮白聚光 + 全車底盤立體陰影 + 四輪貼地鏡面倒影 + 微型充電槍與自然垂墜加長綠光電流 -->
   <div class="tesla-stage-card" id="teslaChargingStage">
     <input type="file" id="carPhotoInput" accept="image/*" style="display: none;" onchange="onCarPhotoSelected(event)" />
     <div class="tesla-stage-wrap">
@@ -369,22 +371,22 @@
       <div class="tesla-studio-backlight"></div>
       <div class="tesla-floor-glow"></div>
 
-      <!-- 全車底盤立體陰影畫布（置於 z-index: 2，填滿車底與地面縫隙，不遮蓋輪胎倒影） -->
+      <!-- 全車底盤立體陰影畫布（置於 z-index: 2） -->
       <canvas id="teslaUnderbodyShadow" class="tesla-underbody-shadow" width="1000" height="625"></canvas>
 
-      <!-- 鏡面倒影畫布（置於 z-index: 3，讓輪胎倒影清晰貼合原車輪胎） -->
+      <!-- 鏡面倒影畫布（置於 z-index: 3） -->
       <canvas id="teslaCarReflection" class="tesla-car-reflection" width="1000" height="625"></canvas>
 
       <!-- 實車去背主圖層（直接讀取 GitHub 資料夾內的 n7.png / bria.png） -->
       <img id="teslaCarMain" class="tesla-car-main" alt="Charging EV" onerror="onCarImageError()" onload="onCarImageLoad()" />
 
-      <!-- 微型立體充電槍與自然垂墜綠色電流線（純向量三層同心柔光，完美相容 iOS 與 Mac） -->
+      <!-- 微型立體充電槍與向左延伸超過車尾的自然垂墜綠色電流線 -->
       <svg class="tesla-cable-svg" viewBox="0 0 400 250">
         <defs>
           <!-- 充電線末端漸層消散遮罩 -->
           <linearGradient id="cableFadeGrad" x1="0%" y1="100%" x2="100%" y2="0%">
             <stop offset="0%" stop-color="#34d399" stop-opacity="0" />
-            <stop offset="18%" stop-color="#34d399" stop-opacity="0.85" />
+            <stop offset="12%" stop-color="#34d399" stop-opacity="0.82" />
             <stop offset="100%" stop-color="#2dd4bf" stop-opacity="1" />
           </linearGradient>
           <!-- 微型充電槍立體金屬漸層 -->
@@ -395,14 +397,14 @@
           </linearGradient>
         </defs>
 
-        <!-- 第一層：外圍寬柔光（無 CSS blur，徹底消除手機端方框破圖） -->
-        <path id="cableGlowWide" class="cable-glow-wide" d="M 90 166 C 122 158, 152 150, 162 143 C 167 139, 167 120, 165.5 101" stroke="url(#cableFadeGrad)" />
+        <!-- 第一層：外圍寬柔光 -->
+        <path id="cableGlowWide" class="cable-glow-wide" d="M 30 182 C 72 172, 148 153, 162 143 C 167 139, 167 120, 165.5 101" stroke="url(#cableFadeGrad)" />
         <!-- 第二層：中層光暈 -->
-        <path id="cableOuterGlow" class="cable-outer-glow" d="M 90 166 C 122 158, 152 150, 162 143 C 167 139, 167 120, 165.5 101" stroke="url(#cableFadeGrad)" />
+        <path id="cableOuterGlow" class="cable-outer-glow" d="M 30 182 C 72 172, 148 153, 162 143 C 167 139, 167 120, 165.5 101" stroke="url(#cableFadeGrad)" />
         <!-- 第三層：自然垂墜發光電纜細核心線 -->
-        <path id="cableMainLine" class="cable-main-line" d="M 90 166 C 122 158, 152 150, 162 143 C 167 139, 167 120, 165.5 101" stroke="url(#cableFadeGrad)" />
-        <!-- 第四層：順著電纜向上流進充電槍的細緻電流光點 -->
-        <path id="cableFlowPulse" class="cable-flow-pulse" d="M 98 164 C 126 156, 153 149, 162 143 C 167 139, 167 120, 165.5 101" />
+        <path id="cableMainLine" class="cable-main-line" d="M 30 182 C 72 172, 148 153, 162 143 C 167 139, 167 120, 165.5 101" stroke="url(#cableFadeGrad)" />
+        <!-- 第四層：從車尾左方順著電纜向上流進充電槍的細緻電流光點 -->
+        <path id="cableFlowPulse" class="cable-flow-pulse" d="M 40 179.5 C 78 170, 149 152, 162 143 C 167 139, 167 120, 165.5 101" />
 
         <!-- 插入端：充電孔呼吸光暈與等比例微型充電槍頭 -->
         <circle id="portHaloPulse" class="port-halo-pulse" cx="166" cy="95" r="3" fill="none" stroke="#34d399" stroke-width="1.6" />
@@ -900,10 +902,10 @@
         //    👉 數字調小 (例如 2、0)  ：車頭最右端倒影「往右下壓低(遠離前保桿)」
         rightTiltDeg: 7.0,
 
-        // 6. 左右分界中心點 (預設 0.59)
+        // 6. 左右分界中心點 (預設 0.58)
         pivotXRatio: 0.58,
 
-        // 7. 倒影垂直延伸長度比例 (預設 0.58) 與漸層消散長度 (預設 0.42)
+        // 7. 倒影垂直延伸長度比例 (預設 0.68) 與漸層消散長度 (預設 0.52)
         scaleY: 0.68,
         fadeHeightRatio: 0.52,
 
@@ -921,6 +923,36 @@
       mainEl.dataset.aligned = '0';
       const list = CAR_FILE_CANDIDATES[carType] || ['n7.png'];
       mainEl.src = list[0];
+    }
+
+    // 在 Canvas 內部直接執行雙線性降採樣柔焦（取代 CSS filter: blur，徹底根除 iOS 局部重繪方框破圖）
+    function applyCanvasBakedBlur(sourceCanvas, targetCanvas, downscaleRatio, darkenAlpha = 0) {
+      const SW = targetCanvas.width;
+      const SH = targetCanvas.height;
+      const smallW = Math.max(20, Math.round(SW * downscaleRatio));
+      const smallH = Math.max(20, Math.round(SH * downscaleRatio));
+
+      const tmpCanvas = document.createElement('canvas');
+      tmpCanvas.width = smallW;
+      tmpCanvas.height = smallH;
+      const tCtx = tmpCanvas.getContext('2d');
+      tCtx.imageSmoothingEnabled = true;
+      tCtx.imageSmoothingQuality = 'high';
+      tCtx.drawImage(sourceCanvas, 0, 0, SW, SH, 0, 0, smallW, smallH);
+
+      if (darkenAlpha > 0) {
+        tCtx.globalCompositeOperation = 'source-atop';
+        tCtx.fillStyle = `rgba(0, 0, 0, ${darkenAlpha})`;
+        tCtx.fillRect(0, 0, smallW, smallH);
+        tCtx.globalCompositeOperation = 'source-over';
+      }
+
+      const dstCtx = targetCanvas.getContext('2d');
+      dstCtx.globalCompositeOperation = 'source-over';
+      dstCtx.clearRect(0, 0, SW, SH);
+      dstCtx.imageSmoothingEnabled = true;
+      dstCtx.imageSmoothingQuality = 'high';
+      dstCtx.drawImage(tmpCanvas, 0, 0, smallW, smallH, 0, 0, SW, SH);
     }
 
     // 依當前車款對應的 REFL_CONFIG[currentStageCarType] 獨立建立鏡面倒影與全車底盤陰影
@@ -1057,7 +1089,6 @@
         for (let x = 0; x < SW; x++) {
           const carEdge = bottomY[x] > 0 ? bottomY[x] : y2Car;
           if (x <= pivotX) {
-            // 左半部 (後輪 ↔ 中間前輪)：受 moveDown、leftSideGap、leftTiltDeg 控制
             const t = (x - x1Car) / Math.max(1, x2Car - x1Car);
             const wheelLine = y1Car + t * (y2Car - y1Car);
             rawSrcBase[x] = Math.max(carEdge, wheelLine);
@@ -1066,7 +1097,6 @@
             const blendL = Math.min(1, distL / 35);
             rawDestLine[x] = (y2Car + movePx) + (leftGapPx * blendL) - (distL * leftSlope);
           } else {
-            // 右半部 (中間前輪 ↔ 車頭前保桿)：受 moveDown、rightSideGap、rightTiltDeg 控制
             const t = (x - x2Car) / Math.max(1, x3Car - x2Car);
             const wheelLineR = y2Car + t * (y3Car - y2Car);
             rawSrcBase[x] = Math.max(carEdge, wheelLineR);
@@ -1093,13 +1123,15 @@
           smoothDestLine[x] = dSum / cnt;
         }
 
-        // 5. 繪製「全車底盤立體陰影」(#teslaUnderbodyShadow)
+        // 5. 繪製「全車底盤立體陰影」並直接烘焙柔焦像素
         shadowCanvas.style.opacity = String(cfg.shadowOpacity);
-        const shCtx = shadowCanvas.getContext('2d');
-        shCtx.clearRect(0, 0, SW, SH);
+        const shWorkCanvas = document.createElement('canvas');
+        shWorkCanvas.width = SW;
+        shWorkCanvas.height = SH;
+        const shCtx = shWorkCanvas.getContext('2d');
 
         const spreadY = cfg.shadowSpreadY;
-        const padX = 14;
+        const padX = 18;
         for (let x = Math.max(0, xLeft - padX); x <= Math.min(SW - 1, xRight + padX); x++) {
           const clampedX = Math.min(xRight, Math.max(xLeft, x));
           const carEdgeY = bottomY[clampedX] > 0 ? bottomY[clampedX] : smoothSrcBase[clampedX];
@@ -1112,7 +1144,7 @@
           let edgeAlpha = 1;
           const distLeft = x - (xLeft - padX);
           const distRight = (xRight + padX) - x;
-          const taperW = padX + carW * 0.045;
+          const taperW = padX + carW * 0.05;
           if (distLeft < taperW) edgeAlpha = Math.max(0, distLeft / taperW);
           else if (distRight < taperW) edgeAlpha = Math.max(0, distRight / taperW);
           edgeAlpha = Math.pow(edgeAlpha, 1.4);
@@ -1126,11 +1158,13 @@
           shCtx.fillStyle = colGrad;
           shCtx.fillRect(x, shadowTop, 1, totalH);
         }
+        applyCanvasBakedBlur(shWorkCanvas, shadowCanvas, 0.22, 0);
 
-        // 6. 繪製鏡面倒影 (#teslaCarReflection，位於 z-index: 3)
-        const rCtx = reflCanvas.getContext('2d');
-        rCtx.globalCompositeOperation = 'source-over';
-        rCtx.clearRect(0, 0, SW, SH);
+        // 6. 繪製鏡面倒影至工作畫布
+        const reflWorkCanvas = document.createElement('canvas');
+        reflWorkCanvas.width = SW;
+        reflWorkCanvas.height = SH;
+        const rCtx = reflWorkCanvas.getContext('2d');
 
         for (let x = xLeft; x <= xRight; x++) {
           if (bottomY[x] <= 0) continue;
@@ -1145,7 +1179,7 @@
           );
         }
 
-        // 7. 套用獨立漸層消散遮罩
+        // 7. 套用獨立漸層消散遮罩，並烘焙柔焦與微暗化至最終 #teslaCarReflection 畫布
         const maskCanvas = document.createElement('canvas');
         maskCanvas.width = SW;
         maskCanvas.height = SH;
@@ -1171,6 +1205,8 @@
         rCtx.globalCompositeOperation = 'destination-in';
         rCtx.drawImage(maskCanvas, 0, 0);
         rCtx.globalCompositeOperation = 'source-over';
+
+        applyCanvasBakedBlur(reflWorkCanvas, reflCanvas, 0.46, 0.20);
       } catch (e) {
         console.warn('建立四輪鏡面倒影與全車底盤陰影失敗:', e);
       }
@@ -1260,17 +1296,20 @@
       const dropY = (portY + 46).toFixed(1);
       const bendX = (portX - 4).toFixed(1);
       const bendY = (portY + 49).toFixed(1);
-      // 延伸至左下方地面的起點
-      const startX = (portX - 76).toFixed(1);
-      const startY = (portY + 71).toFixed(1);
+      // 繼續向左延伸超過車尾的地面起點 (portX - 136)
+      const startX = (portX - 136).toFixed(1);
+      const startY = (portY + 87).toFixed(1);
+      const pulseStartX = (portX - 124).toFixed(1);
+      const pulseStartY = (portY + 83.5).toFixed(1);
 
-      // 特斯拉介面風格：從左下方地面平緩延伸 -> 轉折向上 -> 自然垂直進入充電槍尾端
-      const cablePath = `M ${startX} ${startY} C ${portX - 44} ${portY + 63}, ${portX - 14} ${portY + 55}, ${bendX} ${bendY} C ${dropX} ${dropY}, ${dropX} ${portY + 24}, ${tailX} ${tailY}`;
+      // 特斯拉介面風格：從超過車尾的左下方地面平緩延伸 -> 轉折向上 -> 自然垂直進入充電槍尾端
+      const cablePath = `M ${startX} ${startY} C ${portX - 92} ${portY + 75}, ${portX - 28} ${portY + 56}, ${bendX} ${bendY} C ${dropX} ${dropY}, ${dropX} ${portY + 24}, ${tailX} ${tailY}`;
+      const pulsePath = `M ${pulseStartX} ${pulseStartY} C ${portX - 86} ${portY + 73}, ${portX - 28} ${portY + 56}, ${bendX} ${bendY} C ${dropX} ${dropY}, ${dropX} ${portY + 24}, ${tailX} ${tailY}`;
 
       document.getElementById('cableGlowWide').setAttribute('d', cablePath);
       document.getElementById('cableOuterGlow').setAttribute('d', cablePath);
       document.getElementById('cableMainLine').setAttribute('d', cablePath);
-      document.getElementById('cableFlowPulse').setAttribute('d', cablePath);
+      document.getElementById('cableFlowPulse').setAttribute('d', pulsePath);
 
       const haloPulse = document.getElementById('portHaloPulse');
       const coreGlow = document.getElementById('portCoreGlow');
