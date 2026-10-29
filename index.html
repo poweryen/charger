@@ -79,7 +79,7 @@
     .flow-line.charging::after { content: ''; position: absolute; top: 0; left: -35%; width: 35%; height: 100%; background: linear-gradient(90deg, transparent, #4ade80, transparent); animation: flowAnim 1.1s linear infinite; }
     @keyframes flowAnim { 0% { left: -35%; } 100% { left: 100%; } }
 
-    /* ==================== 特斯拉原廠 UI 風格：展間白光背光 + 貼地鏡面倒影 + 垂墜綠光充電線 ==================== */
+    /* ==================== 特斯拉原廠 UI 風格：展間白光背光 + 四輪貼地鏡面倒影 + 垂墜綠光充電線 ==================== */
     .tesla-stage-card {
       display: none;
       position: relative;
@@ -108,7 +108,7 @@
       margin: 0 auto;
     }
 
-    /* 背景與地板交界處的明亮冷白聚光燈（營造 Tesla 展間立體打光感） */
+    /* 背景與地板交界處的明亮冷白聚光燈 */
     .tesla-studio-backlight {
       position: absolute;
       left: 6%;
@@ -133,41 +133,29 @@
       z-index: 1;
     }
 
-    /* 車底與四輪壓地深色接觸暗影（置於倒影下層，避免遮擋前輪倒影細節） */
+    /* 車底壓地環境暗影 */
     .tesla-contact-shadow {
       position: absolute;
       left: 16%;
       width: 68%;
       bottom: 24%;
       height: 10%;
-      background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0.90) 15%, rgba(0, 0, 0, 0.55) 52%, transparent 78%);
-      transform: rotate(8deg) skewX(-12deg);
+      background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0.88) 15%, rgba(0, 0, 0, 0.50) 52%, transparent 78%);
+      transform: rotate(6deg) skewX(-10deg);
       filter: blur(4px);
       pointer-events: none;
       z-index: 2;
     }
 
-    /* ==================== 【車子鏡面倒影調整區】 ==================== */
+    /* 四輪貼合鏡面倒影圖層（由 Canvas 依 V 型四輪接地線自動繪製） */
     .tesla-car-reflection {
       position: absolute;
-      left: 7%;
-      width: 86%;
-      top: 8%;
-      height: 64%;
+      inset: 0;
+      width: 100%;
+      height: 100%;
       object-fit: contain;
-      object-position: center bottom;
-      /* 1. 調整倒影上下接合高度 (第二個數值 94%)：
-         數字調大 (如 96%) 倒影會整體往下移；數字調小 (如 91%) 倒影會往上收進車底 */
-      transform-origin: 50% 94%;
-      /* 2. 調整倒影傾斜角度與比例：
-         - rotate(10deg)：控制倒影旋轉角度（正值越大，左側車尾倒影越往上貼、右側車頭越往下）
-         - scaleY(-0.65)：控制垂直翻轉後的倒影長度比例（負號代表上下翻轉）
-         - skewX(-6deg)：控制倒影輪框的左右透視斜率 */
-      transform: rotate(8deg) scaleY(-0.65) skewX(-6deg);
-      opacity: 0.44;
-      filter: blur(1.4px) brightness(0.85) contrast(1.1);
-      -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.95) 2%, rgba(0,0,0,0.55) 32%, rgba(0,0,0,0.12) 58%, transparent 75%);
-      mask-image: linear-gradient(to top, rgba(0,0,0,0.95) 2%, rgba(0,0,0,0.55) 32%, rgba(0,0,0,0.12) 58%, transparent 75%);
+      opacity: 0.45;
+      filter: blur(1.2px) brightness(0.86) contrast(1.08);
       pointer-events: none;
       z-index: 3;
     }
@@ -181,12 +169,12 @@
       height: 64%;
       object-fit: contain;
       object-position: center bottom;
-      filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.7));
+      filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.65));
       pointer-events: none;
       z-index: 4;
     }
 
-    /* 充電槍與自然垂墜綠色電流線 SVG 覆蓋層（無充電線倒影） */
+    /* 充電槍與自然垂墜綠色電流線 SVG 覆蓋層 */
     .tesla-cable-svg {
       position: absolute;
       inset: 0;
@@ -370,7 +358,7 @@
     </div>
   </div>
 
-  <!-- 特斯拉原廠 UI 風格：展間亮白聚光 + 貼地鏡面倒影 + 微型充電槍與自然垂墜綠光電流 -->
+  <!-- 特斯拉原廠 UI 風格：展間亮白聚光 + 四輪貼合鏡面倒影 + 微型充電槍與自然垂墜綠光電流 -->
   <div class="tesla-stage-card" id="teslaChargingStage" onclick="promptCarPhotoUpload()">
     <input type="file" id="carPhotoInput" accept="image/*" style="display: none;" onchange="onCarPhotoSelected(event)" />
     <div class="tesla-stage-wrap">
@@ -379,13 +367,13 @@
       <div class="tesla-floor-glow"></div>
       <div class="tesla-contact-shadow"></div>
 
-      <!-- 鏡面倒影層（自動裁切透明邊界並緊貼前後輪底部） -->
+      <!-- 鏡面倒影層（由 Canvas 自動對齊四顆輪胎底部生成） -->
       <img id="teslaCarReflection" class="tesla-car-reflection" alt="" />
 
       <!-- 實車去背主圖層 -->
       <img id="teslaCarMain" class="tesla-car-main" alt="Charging EV" onerror="onCarImageError()" onload="onCarImageLoad()" />
 
-      <!-- 微型立體充電槍與自然垂墜綠色電流線（已移除充電線倒影） -->
+      <!-- 微型立體充電槍與自然垂墜綠色電流線（無充電線倒影） -->
       <svg class="tesla-cable-svg" viewBox="0 0 400 250">
         <defs>
           <!-- 充電線末端漸層消散遮罩 -->
@@ -415,13 +403,9 @@
 
         <!-- 微型充電槍頭群組（動態對位至 n7 或 Bria 充電孔） -->
         <g id="chargingGunGroup" transform="translate(166, 95)">
-          <!-- 槍頭插入插座深色底座 -->
           <ellipse cx="0.8" cy="-0.4" rx="2.4" ry="2.8" fill="#090d16" stroke="#334155" stroke-width="0.5" />
-          <!-- 充電槍流線握把本體 -->
           <path d="M 1.2 -1.6 C -1.2 -1.8, -3.2 -0.2, -3.0 2.2 C -2.8 3.8, -1.8 5.2, -0.5 6.4 L 1.4 5.8 C 0.6 4.4, 0.2 2.8, 0.6 1.2 C 0.9 0.2, 1.5 -0.6, 1.2 -1.6 Z" fill="url(#plugBodyGrad)" stroke="#64748b" stroke-width="0.45" />
-          <!-- 槍柄上方弧形高光線 -->
           <path d="M 0.8 -1.2 C -1.0 -1.2, -2.3 0.2, -2.1 2.2" fill="none" stroke="#cbd5e1" stroke-width="0.45" stroke-linecap="round" opacity="0.8" />
-          <!-- 槍身微型綠色充電狀態指示燈 -->
           <circle cx="-1.2" cy="1.2" r="0.75" fill="#4ade80" />
         </g>
       </svg>
@@ -599,7 +583,7 @@
     let allHistoryRecords = [];
     let isHistoryExpanded = false;
     let currentStageCarType = 'n7';
-    const trimmedCache = {};
+    const stageImageCache = {};
     const HISTORY_LIMIT = 5;
 
     // 4 種訪客互動展示情境（整月模擬：雙車每日各 40km = 月跑 2400km / 總用電 400.0 kWh / 全離峰 796.0 元）
@@ -854,69 +838,241 @@
       return 'car-badge car-default';
     }
 
-    // ==================== 特斯拉風格實車去背舞台、鏡面倒影與自然垂墜充電線控制 ====================
+    // ==================== 【車子四輪鏡面倒影微調參數區】 ====================
+    const REFL_CONFIG = {
+      rearWheelOffsetY: -2,     // 左側後輪倒影貼合微調 (px)：負數往上貼緊輪胎、正數往下移
+      centerWheelOffsetY: -3,   // 中間前輪倒影貼合微調 (px)：負數往上貼緊輪胎、正數往下移
+      farFrontWheelOffsetY: -3, // 右側遠端前輪/前保桿倒影微調 (px)：負數往上貼緊、正數往下移
+      gapRatio: 0.25,           // 車門側裙與前保桿離地縫隙比例 (0 ~ 1)：越小倒影越緊貼車底
+      scaleY: 0.58,             // 倒影垂直延伸長度比例（預設 0.58）
+      fadeHeightRatio: 0.42     // 倒影往下漸層消散的長度比例（預設 0.42）
+    };
+
     function getCarImageSource(carType) {
       const localSaved = localStorage.getItem(`custom_car_img_${carType}_v1`);
       if (localSaved) return localSaved;
       return carType === 'n7' ? 'n7.png' : 'bria.png';
     }
 
-    // 自動生成底部緊貼的鏡面倒影圖（消除原圖底部透明空白造成的倒影斷層）
-    function syncReflectionImage(imgEl) {
+    // 自動偵測四輪最低切點並建立 V 型透視貼地鏡面倒影
+    function buildFourWheelReflection(imgEl) {
       const reflEl = document.getElementById('teslaCarReflection');
       const cacheKey = currentStageCarType + '_' + (imgEl.src ? imgEl.src.length : 0);
-      if (trimmedCache[cacheKey]) {
-        reflEl.src = trimmedCache[cacheKey];
+      if (stageImageCache[cacheKey]) {
+        imgEl.dataset.aligned = '1';
+        imgEl.src = stageImageCache[cacheKey].mainUrl;
+        reflEl.src = stageImageCache[cacheKey].reflUrl;
         return;
       }
+
       try {
         const w = imgEl.naturalWidth;
         const h = imgEl.naturalHeight;
-        if (!w || !h) {
-          reflEl.src = imgEl.src;
-          return;
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(imgEl, 0, 0);
-        const data = ctx.getImageData(0, 0, w, h).data;
+        if (!w || !h) return;
+
+        // 1. 先將原圖底部透明留白往下貼齊畫布底端，保持充電孔與車身位置 100% 固定
+        const rawCanvas = document.createElement('canvas');
+        rawCanvas.width = w;
+        rawCanvas.height = h;
+        const rawCtx = rawCanvas.getContext('2d');
+        rawCtx.drawImage(imgEl, 0, 0);
+        const rawData = rawCtx.getImageData(0, 0, w, h).data;
 
         let maxY = h - 1;
-        outerBottom: for (let y = h - 1; y >= 0; y--) {
-          for (let x = 0; x < w; x += 4) {
-            if (data[(y * w + x) * 4 + 3] > 25) {
+        outerMax: for (let y = h - 1; y >= 0; y--) {
+          for (let x = 0; x < w; x += 2) {
+            if (rawData[(y * w + x) * 4 + 3] > 30) {
               maxY = y;
-              break outerBottom;
+              break outerMax;
             }
           }
         }
-        // 將底部透明留白往下平移貼齊畫布底端，使翻轉倒影直接緊貼前後輪
+
         const shiftDown = (h - 1) - maxY;
-        if (shiftDown > 2 && shiftDown < h * 0.45) {
-          ctx.clearRect(0, 0, w, h);
-          ctx.drawImage(imgEl, 0, shiftDown);
-          const alignedUrl = canvas.toDataURL('image/png');
-          trimmedCache[cacheKey] = alignedUrl;
-          imgEl.dataset.aligned = '1';
-          imgEl.src = alignedUrl;
-          reflEl.src = alignedUrl;
-          return;
+        if (shiftDown > 1 && shiftDown < h * 0.45) {
+          rawCtx.clearRect(0, 0, w, h);
+          rawCtx.drawImage(imgEl, 0, shiftDown);
         }
+        const alignedMainUrl = rawCanvas.toDataURL('image/png');
+
+        // 2. 建立與舞台相同比例 (16:10) 的高解析畫布 (1000 x 625)，對應 .tesla-car-main 位置 (left:7%, width:86%, top:8%, height:64%)
+        const SW = 1000, SH = 625;
+        const boxX = 70, boxY = 50, boxW = 860, boxH = 400;
+        const scale = Math.min(boxW / w, boxH / h);
+        const drawW = w * scale;
+        const drawH = h * scale;
+        const drawX = boxX + (boxW - drawW) / 2;
+        const drawY = boxY + (boxH - drawH);
+
+        const stageCarCanvas = document.createElement('canvas');
+        stageCarCanvas.width = SW;
+        stageCarCanvas.height = SH;
+        const sCtx = stageCarCanvas.getContext('2d');
+        sCtx.drawImage(rawCanvas, drawX, drawY, drawW, drawH);
+
+        const sData = sCtx.getImageData(0, 0, SW, SH).data;
+        const bottomY = new Int32Array(SW).fill(-1);
+        let xLeft = SW - 1, xRight = 0;
+
+        for (let x = 0; x < SW; x++) {
+          for (let y = SH - 1; y >= 0; y--) {
+            if (sData[(y * SW + x) * 4 + 3] > 35) {
+              bottomY[x] = y;
+              if (x < xLeft) xLeft = x;
+              if (x > xRight) xRight = x;
+              break;
+            }
+          }
+        }
+
+        const carW = Math.max(10, xRight - xLeft);
+
+        // 3. 找出三處可見輪胎接地最低點：P1(左後輪)、P2(中間前輪)、P3(右側遠端前輪)
+        // (a) 中間前輪 P2 (約在車寬 35% ~ 65% 處的最高 y 值)
+        let x2 = Math.round(xLeft + carW * 0.50);
+        let y2 = -1;
+        const cStart = Math.round(xLeft + carW * 0.35);
+        const cEnd = Math.round(xLeft + carW * 0.65);
+        for (let x = cStart; x <= cEnd; x++) {
+          if (bottomY[x] > y2) {
+            y2 = bottomY[x];
+            x2 = x;
+          }
+        }
+
+        // (b) 左側後輪 P1 (約在車寬 4% ~ 27% 處與 P2 構成最平緩下切線的輪胎底點)
+        let x1 = Math.round(xLeft + carW * 0.14);
+        let y1 = bottomY[x1] > 0 ? bottomY[x1] : y2 - 25;
+        let minSlopeL = Infinity;
+        const rStart = Math.round(xLeft + carW * 0.04);
+        const rEnd = Math.round(xLeft + carW * 0.27);
+        for (let x = rStart; x <= rEnd; x++) {
+          if (bottomY[x] > 0 && x2 > x) {
+            const slope = (y2 - bottomY[x]) / (x2 - x);
+            if (slope < minSlopeL) {
+              minSlopeL = slope;
+              x1 = x;
+              y1 = bottomY[x];
+            }
+          }
+        }
+
+        // (c) 右側遠端前輪 P3 (約在車寬 74% ~ 94% 處與 P2 構成最平緩上切線的遠端輪胎底點)
+        let x3 = Math.round(xLeft + carW * 0.85);
+        let y3 = bottomY[x3] > 0 ? bottomY[x3] : y2 - 20;
+        let minSlopeR = Infinity;
+        const fStart = Math.round(xLeft + carW * 0.74);
+        const fEnd = Math.round(xLeft + carW * 0.94);
+        for (let x = fStart; x <= fEnd; x++) {
+          if (bottomY[x] > 0 && x > x2) {
+            const slope = (y2 - bottomY[x]) / (x - x2);
+            if (slope < minSlopeR) {
+              minSlopeR = slope;
+              x3 = x;
+              y3 = bottomY[x];
+            }
+          }
+        }
+
+        // 套用 REFL_CONFIG 微調偏移
+        const adjY1 = y1 + REFL_CONFIG.rearWheelOffsetY;
+        const adjY2 = y2 + REFL_CONFIG.centerWheelOffsetY;
+        const adjY3 = y3 + REFL_CONFIG.farFrontWheelOffsetY;
+
+        // 4. 計算每一列的 V 型地面反射基準線 yMirror[x]
+        const rawMirror = new Float32Array(SW);
+        for (let x = 0; x < SW; x++) {
+          let lineY;
+          if (x <= x2) {
+            const t = (x - x1) / Math.max(1, x2 - x1);
+            lineY = adjY1 + t * (adjY2 - adjY1);
+          } else {
+            const t = (x - x2) / Math.max(1, x3 - x2);
+            lineY = adjY2 + t * (adjY3 - adjY2);
+          }
+
+          if (bottomY[x] > 0) {
+            const gap = Math.max(0, lineY - bottomY[x]);
+            const baseOffset = x <= x2
+              ? REFL_CONFIG.rearWheelOffsetY + (REFL_CONFIG.centerWheelOffsetY - REFL_CONFIG.rearWheelOffsetY) * Math.max(0, Math.min(1, (x - x1) / Math.max(1, x2 - x1)))
+              : REFL_CONFIG.centerWheelOffsetY + (REFL_CONFIG.farFrontWheelOffsetY - REFL_CONFIG.centerWheelOffsetY) * Math.max(0, Math.min(1, (x - x2) / Math.max(1, x3 - x2)));
+            rawMirror[x] = bottomY[x] + baseOffset + gap * REFL_CONFIG.gapRatio;
+          } else {
+            rawMirror[x] = lineY;
+          }
+        }
+
+        // 平滑化反射基準線，確保鋁圈與車身線條圓潤不變形
+        const smoothMirror = new Float32Array(SW);
+        const radius = 10;
+        for (let x = 0; x < SW; x++) {
+          let sum = 0, cnt = 0;
+          for (let k = -radius; k <= radius; k++) {
+            const nx = x + k;
+            if (nx >= xLeft && nx <= xRight) {
+              sum += rawMirror[nx];
+              cnt++;
+            }
+          }
+          smoothMirror[x] = cnt > 0 ? sum / cnt : rawMirror[x];
+        }
+
+        // 5. 逐列繪製四輪緊貼的垂直翻轉鏡面倒影
+        const reflCanvas = document.createElement('canvas');
+        reflCanvas.width = SW;
+        reflCanvas.height = SH;
+        const rCtx = reflCanvas.getContext('2d');
+
+        for (let x = xLeft; x <= xRight; x++) {
+          const bY = bottomY[x];
+          if (bY <= 0) continue;
+          const destStartY = smoothMirror[x];
+          const reflH = bY * REFL_CONFIG.scaleY;
+
+          rCtx.save();
+          rCtx.translate(0, destStartY);
+          rCtx.scale(1, -REFL_CONFIG.scaleY);
+          rCtx.drawImage(stageCarCanvas, x, 0, 1, bY, x, -bY, 1, bY);
+          rCtx.restore();
+        }
+
+        // 6. 沿著 V 型四輪接地線進行由上而下的自然漸層消散遮罩
+        const fadeCanvas = document.createElement('canvas');
+        fadeCanvas.width = 1;
+        fadeCanvas.height = 256;
+        const fCtx = fadeCanvas.getContext('2d');
+        const grad = fCtx.createLinearGradient(0, 0, 0, 256);
+        grad.addColorStop(0, 'rgba(0, 0, 0, 1)');
+        grad.addColorStop(0.38, 'rgba(0, 0, 0, 0.48)');
+        grad.addColorStop(0.78, 'rgba(0, 0, 0, 0.08)');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        fCtx.fillStyle = grad;
+        fCtx.fillRect(0, 0, 1, 256);
+
+        rCtx.globalCompositeOperation = 'destination-in';
+        const fadeLen = drawH * REFL_CONFIG.fadeHeightRatio;
+        for (let x = xLeft; x <= xRight; x++) {
+          rCtx.drawImage(fadeCanvas, 0, 0, 1, 256, x, smoothMirror[x] - 2, 1, fadeLen);
+        }
+
+        const reflDataUrl = reflCanvas.toDataURL('image/png');
+        stageImageCache[cacheKey] = { mainUrl: alignedMainUrl, reflUrl: reflDataUrl };
+
+        imgEl.dataset.aligned = '1';
+        imgEl.src = alignedMainUrl;
+        reflEl.src = reflDataUrl;
       } catch (e) {
-        // 跨網域或讀取限制時直接同步原圖
+        reflEl.src = imgEl.src;
       }
-      reflEl.src = imgEl.src;
     }
 
     function onCarImageLoad() {
       const mainEl = document.getElementById('teslaCarMain');
       document.getElementById('teslaMissingTip').classList.remove('show');
       mainEl.style.opacity = '1';
-      document.getElementById('teslaCarReflection').style.opacity = '0.44';
+      document.getElementById('teslaCarReflection').style.opacity = '0.45';
       if (mainEl.dataset.aligned !== '1') {
-        syncReflectionImage(mainEl);
+        buildFourWheelReflection(mainEl);
       } else {
         mainEl.dataset.aligned = '0';
       }
@@ -961,7 +1117,6 @@
           const mainEl = document.getElementById('teslaCarMain');
           mainEl.dataset.aligned = '0';
           mainEl.src = dataUrl;
-          document.getElementById('teslaCarReflection').src = dataUrl;
         };
         img.src = e.target.result;
       };
@@ -988,7 +1143,6 @@
         const mainEl = document.getElementById('teslaCarMain');
         mainEl.dataset.aligned = '0';
         mainEl.src = src;
-        document.getElementById('teslaCarReflection').src = src;
       }
 
       // 充電孔座標：n7 (166, 95)、Bria (157, 97)
