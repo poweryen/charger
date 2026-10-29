@@ -133,21 +133,21 @@
       z-index: 1;
     }
 
-    /* 車底與四輪壓地深色接觸暗影（緊貼輪胎底部） */
+    /* 車底與四輪壓地深色接觸暗影（置於倒影下層，避免遮擋前輪倒影細節） */
     .tesla-contact-shadow {
       position: absolute;
-      left: 14%;
-      width: 73%;
-      bottom: 23%;
-      height: 12%;
-      background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0.95) 18%, rgba(0, 0, 0, 0.68) 55%, transparent 80%);
-      transform: rotate(10deg) skewX(-14deg);
-      filter: blur(4.5px);
+      left: 16%;
+      width: 68%;
+      bottom: 24%;
+      height: 10%;
+      background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0.90) 15%, rgba(0, 0, 0, 0.55) 52%, transparent 78%);
+      transform: rotate(8deg) skewX(-12deg);
+      filter: blur(4px);
       pointer-events: none;
-      z-index: 3;
+      z-index: 2;
     }
 
-    /* 特斯拉 UI 鏡面倒影層（透過斜向仿射鏡像讓前後輪與側裙倒影 100% 緊貼車輪底部） */
+    /* ==================== 【車子鏡面倒影調整區】 ==================== */
     .tesla-car-reflection {
       position: absolute;
       left: 7%;
@@ -156,14 +156,20 @@
       height: 64%;
       object-fit: contain;
       object-position: center bottom;
-      transform-origin: 50% 88%;
-      transform: skewY(11.5deg) scaleY(-0.68) skewY(-11.5deg);
-      opacity: 0.46;
-      filter: blur(1.4px) brightness(0.85) contrast(1.12);
-      -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.95) 8%, rgba(0,0,0,0.55) 36%, rgba(0,0,0,0.12) 62%, transparent 78%);
-      mask-image: linear-gradient(to top, rgba(0,0,0,0.95) 8%, rgba(0,0,0,0.55) 36%, rgba(0,0,0,0.12) 62%, transparent 78%);
+      /* 1. 調整倒影上下接合高度 (第二個數值 94%)：
+         數字調大 (如 96%) 倒影會整體往下移；數字調小 (如 91%) 倒影會往上收進車底 */
+      transform-origin: 50% 94%;
+      /* 2. 調整倒影傾斜角度與比例：
+         - rotate(8deg)：控制倒影旋轉角度（正值越大，左側車尾倒影越往上貼、右側車頭越往下）
+         - scaleY(-0.65)：控制垂直翻轉後的倒影長度比例（負號代表上下翻轉）
+         - skewX(-6deg)：控制倒影輪框的左右透視斜率 */
+      transform: rotate(8deg) scaleY(-0.65) skewX(-6deg);
+      opacity: 0.44;
+      filter: blur(1.4px) brightness(0.85) contrast(1.1);
+      -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.95) 2%, rgba(0,0,0,0.55) 32%, rgba(0,0,0,0.12) 58%, transparent 75%);
+      mask-image: linear-gradient(to top, rgba(0,0,0,0.95) 2%, rgba(0,0,0,0.55) 32%, rgba(0,0,0,0.12) 58%, transparent 75%);
       pointer-events: none;
-      z-index: 2;
+      z-index: 3;
     }
 
     /* 實車去背主圖層 */
@@ -180,7 +186,7 @@
       z-index: 4;
     }
 
-    /* 充電槍與自然垂墜綠色電流線 SVG 覆蓋層 */
+    /* 充電槍與自然垂墜綠色電流線 SVG 覆蓋層（無充電線倒影） */
     .tesla-cable-svg {
       position: absolute;
       inset: 0;
@@ -189,14 +195,6 @@
       pointer-events: none;
       z-index: 5;
       overflow: visible;
-    }
-    .cable-floor-reflection {
-      fill: none;
-      stroke: #34d399;
-      stroke-width: 2.2;
-      stroke-linecap: round;
-      opacity: 0.18;
-      filter: blur(2px);
     }
     .cable-outer-glow {
       fill: none;
@@ -387,7 +385,7 @@
       <!-- 實車去背主圖層 -->
       <img id="teslaCarMain" class="tesla-car-main" alt="Charging EV" onerror="onCarImageError()" onload="onCarImageLoad()" />
 
-      <!-- 微型立體充電槍與自然垂墜綠色電流線 -->
+      <!-- 微型立體充電槍與自然垂墜綠色電流線（已移除充電線倒影） -->
       <svg class="tesla-cable-svg" viewBox="0 0 400 250">
         <defs>
           <!-- 充電線末端漸層消散遮罩 -->
@@ -404,9 +402,6 @@
           </linearGradient>
         </defs>
 
-        <!-- 電纜垂直段在鏡面地板上的微弱倒影 -->
-        <path id="cableFloorRefl" class="cable-floor-reflection" d="M 167 146 C 167 156, 166 168, 165 182" />
-
         <!-- 自然垂墜發光電纜外層柔光 -->
         <path id="cableOuterGlow" class="cable-outer-glow" d="M 90 166 C 122 158, 152 150, 162 143 C 167 139, 167 120, 165.5 101" stroke="url(#cableFadeGrad)" />
         <!-- 自然垂墜發光電纜細核心線 -->
@@ -422,7 +417,7 @@
         <g id="chargingGunGroup" transform="translate(166, 95)">
           <!-- 槍頭插入插座深色底座 -->
           <ellipse cx="0.8" cy="-0.4" rx="2.4" ry="2.8" fill="#090d16" stroke="#334155" stroke-width="0.5" />
-          <!-- 充電槍流線握把本體（小巧比例，前端插入、尾端微向下彎接電纜） -->
+          <!-- 充電槍流線握把本體 -->
           <path d="M 1.2 -1.6 C -1.2 -1.8, -3.2 -0.2, -3.0 2.2 C -2.8 3.8, -1.8 5.2, -0.5 6.4 L 1.4 5.8 C 0.6 4.4, 0.2 2.8, 0.6 1.2 C 0.9 0.2, 1.5 -0.6, 1.2 -1.6 Z" fill="url(#plugBodyGrad)" stroke="#64748b" stroke-width="0.45" />
           <!-- 槍柄上方弧形高光線 -->
           <path d="M 0.8 -1.2 C -1.0 -1.2, -2.3 0.2, -2.1 2.2" fill="none" stroke="#cbd5e1" stroke-width="0.45" stroke-linecap="round" opacity="0.8" />
@@ -919,7 +914,7 @@
       const mainEl = document.getElementById('teslaCarMain');
       document.getElementById('teslaMissingTip').classList.remove('show');
       mainEl.style.opacity = '1';
-      document.getElementById('teslaCarReflection').style.opacity = '0.46';
+      document.getElementById('teslaCarReflection').style.opacity = '0.44';
       if (mainEl.dataset.aligned !== '1') {
         syncReflectionImage(mainEl);
       } else {
@@ -1015,13 +1010,9 @@
       // 特斯拉介面風格：從左下方地面平緩延伸 -> 轉折向上 -> 自然垂直進入充電槍尾端
       const cablePath = `M ${startX} ${startY} C ${portX - 44} ${portY + 63}, ${portX - 14} ${portY + 55}, ${bendX} ${bendY} C ${dropX} ${dropY}, ${dropX} ${portY + 24}, ${tailX} ${tailY}`;
 
-      // 電纜在鏡面地板上的微弱垂直倒影
-      const reflPath = `M ${portX + 1} ${portY + 50} C ${portX + 1} ${portY + 60}, ${portX} ${portY + 72}, ${portX - 1} ${portY + 85}`;
-
       document.getElementById('cableOuterGlow').setAttribute('d', cablePath);
       document.getElementById('cableMainLine').setAttribute('d', cablePath);
       document.getElementById('cableFlowPulse').setAttribute('d', cablePath);
-      document.getElementById('cableFloorRefl').setAttribute('d', reflPath);
 
       const haloPulse = document.getElementById('portHaloPulse');
       const coreGlow = document.getElementById('portCoreGlow');
