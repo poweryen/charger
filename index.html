@@ -147,15 +147,14 @@
       z-index: 2;
     }
 
-    /* 四輪貼合鏡面倒影圖層（由 Canvas 依 V 型四輪接地線自動繪製） */
+    /* 四輪貼合鏡面倒影畫布（由 Canvas 依 V 型四輪接地線直接渲染） */
     .tesla-car-reflection {
       position: absolute;
       inset: 0;
       width: 100%;
       height: 100%;
-      object-fit: contain;
-      opacity: 0.45;
-      filter: blur(1.2px) brightness(0.86) contrast(1.08);
+      opacity: 0.48;
+      filter: blur(1.2px) brightness(0.88) contrast(1.08);
       pointer-events: none;
       z-index: 3;
     }
@@ -367,8 +366,8 @@
       <div class="tesla-floor-glow"></div>
       <div class="tesla-contact-shadow"></div>
 
-      <!-- 鏡面倒影層（由 Canvas 自動對齊四顆輪胎底部生成） -->
-      <img id="teslaCarReflection" class="tesla-car-reflection" alt="" />
+      <!-- 鏡面倒影畫布（由 Canvas 自動對齊四顆輪胎底部生成） -->
+      <canvas id="teslaCarReflection" class="tesla-car-reflection" width="1000" height="625"></canvas>
 
       <!-- 實車去背主圖層 -->
       <img id="teslaCarMain" class="tesla-car-main" alt="Charging EV" onerror="onCarImageError()" onload="onCarImageLoad()" />
@@ -583,7 +582,6 @@
     let allHistoryRecords = [];
     let isHistoryExpanded = false;
     let currentStageCarType = 'n7';
-    const stageImageCache = {};
     const HISTORY_LIMIT = 5;
 
     // 4 種訪客互動展示情境（整月模擬：雙車每日各 40km = 月跑 2400km / 總用電 400.0 kWh / 全離峰 796.0 元）
@@ -840,12 +838,11 @@
 
     // ==================== 【車子四輪鏡面倒影微調參數區】 ====================
     const REFL_CONFIG = {
-      rearWheelOffsetY: -2,     // 左側後輪倒影貼合微調 (px)：負數往上貼緊輪胎、正數往下移
-      centerWheelOffsetY: -3,   // 中間前輪倒影貼合微調 (px)：負數往上貼緊輪胎、正數往下移
-      farFrontWheelOffsetY: -3, // 右側遠端前輪/前保桿倒影微調 (px)：負數往上貼緊、正數往下移
-      gapRatio: 0.25,           // 車門側裙與前保桿離地縫隙比例 (0 ~ 1)：越小倒影越緊貼車底
-      scaleY: 0.58,             // 倒影垂直延伸長度比例（預設 0.58）
-      fadeHeightRatio: 0.42     // 倒影往下漸層消散的長度比例（預設 0.42）
+      rearWheelOffsetY: -4,     // 左側後輪倒影高低微調 (px)：負數越多越往上貼緊輪胎、正數往下移
+      centerWheelOffsetY: -4,   // 中間前輪倒影高低微調 (px)：負數越多越往上貼緊輪胎、正數往下移
+      farFrontWheelOffsetY: -4, // 右側遠端前輪/前保桿倒影微調 (px)：負數越多越往上貼緊、正數往下移
+      scaleY: 0.60,             // 倒影垂直延伸長度比例（預設 0.60）
+      fadeHeightRatio: 0.45     // 倒影往下漸層消散的長度比例（預設 0.45）
     };
 
     function getCarImageSource(carType) {
@@ -854,23 +851,17 @@
       return carType === 'n7' ? 'n7.png' : 'bria.png';
     }
 
-    // 自動偵測四輪最低切點並建立 V 型透視貼地鏡面倒影
+    // 自動偵測左後輪、中間前輪、右前遠端輪切點，繪製 V 型四輪貼合鏡面倒影
     function buildFourWheelReflection(imgEl) {
-      const reflEl = document.getElementById('teslaCarReflection');
-      const cacheKey = currentStageCarType + '_' + (imgEl.src ? imgEl.src.length : 0);
-      if (stageImageCache[cacheKey]) {
-        imgEl.dataset.aligned = '1';
-        imgEl.src = stageImageCache[cacheKey].mainUrl;
-        reflEl.src = stageImageCache[cacheKey].reflUrl;
-        return;
-      }
+      const reflCanvas = document.getElementById('teslaCarReflection');
+      if (!reflCanvas) return;
 
       try {
         const w = imgEl.naturalWidth;
         const h = imgEl.naturalHeight;
         if (!w || !h) return;
 
-        // 1. 先將原圖底部透明留白往下貼齊畫布底端，保持充電孔與車身位置 100% 固定
+        // 1. 將原圖底部透明留白往下平移貼齊底端，確保車身與充電孔位置固定
         const rawCanvas = document.createElement('canvas');
         rawCanvas.width = w;
         rawCanvas.height = h;
@@ -881,7 +872,7 @@
         let maxY = h - 1;
         outerMax: for (let y = h - 1; y >= 0; y--) {
           for (let x = 0; x < w; x += 2) {
-            if (rawData[(y * w + x) * 4 + 3] > 30) {
+            if (rawData[(y * w + x) * 4 + 3] > 60) {
               maxY = y;
               break outerMax;
             }
@@ -889,13 +880,14 @@
         }
 
         const shiftDown = (h - 1) - maxY;
-        if (shiftDown > 1 && shiftDown < h * 0.45) {
+        if (shiftDown > 1 && shiftDown < h * 0.45 && imgEl.dataset.aligned !== '1') {
           rawCtx.clearRect(0, 0, w, h);
           rawCtx.drawImage(imgEl, 0, shiftDown);
+          imgEl.dataset.aligned = '1';
+          imgEl.src = rawCanvas.toDataURL('image/png');
         }
-        const alignedMainUrl = rawCanvas.toDataURL('image/png');
 
-        // 2. 建立與舞台相同比例 (16:10) 的高解析畫布 (1000 x 625)，對應 .tesla-car-main 位置 (left:7%, width:86%, top:8%, height:64%)
+        // 2. 在 1000x625 舞台座標系中繪製主車體（對應 CSS left:7%, width:86%, top:8%, height:64%）
         const SW = 1000, SH = 625;
         const boxX = 70, boxY = 50, boxW = 860, boxH = 400;
         const scale = Math.min(boxW / w, boxH / h);
@@ -910,13 +902,23 @@
         const sCtx = stageCarCanvas.getContext('2d');
         sCtx.drawImage(rawCanvas, drawX, drawY, drawW, drawH);
 
+        // 建立預先垂直翻轉的車體畫布（避免 Safari 負向座標繪圖異常）
+        const flippedCanvas = document.createElement('canvas');
+        flippedCanvas.width = SW;
+        flippedCanvas.height = SH;
+        const flCtx = flippedCanvas.getContext('2d');
+        flCtx.translate(0, SH);
+        flCtx.scale(1, -1);
+        flCtx.drawImage(stageCarCanvas, 0, 0);
+
+        // 掃描每一列 X 的車底最低像素點 bottomY[x]
         const sData = sCtx.getImageData(0, 0, SW, SH).data;
         const bottomY = new Int32Array(SW).fill(-1);
         let xLeft = SW - 1, xRight = 0;
 
         for (let x = 0; x < SW; x++) {
           for (let y = SH - 1; y >= 0; y--) {
-            if (sData[(y * SW + x) * 4 + 3] > 35) {
+            if (sData[(y * SW + x) * 4 + 3] > 60) {
               bottomY[x] = y;
               if (x < xLeft) xLeft = x;
               if (x > xRight) xRight = x;
@@ -927,26 +929,22 @@
 
         const carW = Math.max(10, xRight - xLeft);
 
-        // 3. 找出三處可見輪胎接地最低點：P1(左後輪)、P2(中間前輪)、P3(右側遠端前輪)
-        // (a) 中間前輪 P2 (約在車寬 35% ~ 65% 處的最高 y 值)
+        // 3. 定位三處關鍵輪胎接地最低點：P1(左後輪)、P2(中間前輪)、P3(右側遠端前輪)
+        // (a) 中間前輪 P2 (車寬 36% ~ 64% 處的最低點)
         let x2 = Math.round(xLeft + carW * 0.50);
         let y2 = -1;
-        const cStart = Math.round(xLeft + carW * 0.35);
-        const cEnd = Math.round(xLeft + carW * 0.65);
-        for (let x = cStart; x <= cEnd; x++) {
+        for (let x = Math.round(xLeft + carW * 0.36); x <= Math.round(xLeft + carW * 0.64); x++) {
           if (bottomY[x] > y2) {
             y2 = bottomY[x];
             x2 = x;
           }
         }
 
-        // (b) 左側後輪 P1 (約在車寬 4% ~ 27% 處與 P2 構成最平緩下切線的輪胎底點)
+        // (b) 左側後輪 P1 (車寬 5% ~ 25% 處與 P2 構成下切線的後輪最低切點)
         let x1 = Math.round(xLeft + carW * 0.14);
-        let y1 = bottomY[x1] > 0 ? bottomY[x1] : y2 - 25;
+        let y1 = bottomY[x1] > 0 ? bottomY[x1] : y2 - 30;
         let minSlopeL = Infinity;
-        const rStart = Math.round(xLeft + carW * 0.04);
-        const rEnd = Math.round(xLeft + carW * 0.27);
-        for (let x = rStart; x <= rEnd; x++) {
+        for (let x = Math.round(xLeft + carW * 0.05); x <= Math.round(xLeft + carW * 0.25); x++) {
           if (bottomY[x] > 0 && x2 > x) {
             const slope = (y2 - bottomY[x]) / (x2 - x);
             if (slope < minSlopeL) {
@@ -957,13 +955,11 @@
           }
         }
 
-        // (c) 右側遠端前輪 P3 (約在車寬 74% ~ 94% 處與 P2 構成最平緩上切線的遠端輪胎底點)
-        let x3 = Math.round(xLeft + carW * 0.85);
-        let y3 = bottomY[x3] > 0 ? bottomY[x3] : y2 - 20;
+        // (c) 右側遠端前輪 P3 (車寬 75% ~ 95% 處與 P2 構成上切線的遠端前輪最低切點)
+        let x3 = Math.round(xLeft + carW * 0.86);
+        let y3 = bottomY[x3] > 0 ? bottomY[x3] : y2 - 22;
         let minSlopeR = Infinity;
-        const fStart = Math.round(xLeft + carW * 0.74);
-        const fEnd = Math.round(xLeft + carW * 0.94);
-        for (let x = fStart; x <= fEnd; x++) {
+        for (let x = Math.round(xLeft + carW * 0.75); x <= Math.round(xLeft + carW * 0.95); x++) {
           if (bottomY[x] > 0 && x > x2) {
             const slope = (y2 - bottomY[x]) / (x - x2);
             if (slope < minSlopeR) {
@@ -974,95 +970,80 @@
           }
         }
 
-        // 套用 REFL_CONFIG 微調偏移
+        // 套用 REFL_CONFIG 的輪位高低微調
         const adjY1 = y1 + REFL_CONFIG.rearWheelOffsetY;
         const adjY2 = y2 + REFL_CONFIG.centerWheelOffsetY;
         const adjY3 = y3 + REFL_CONFIG.farFrontWheelOffsetY;
 
-        // 4. 計算每一列的 V 型地面反射基準線 yMirror[x]
+        // 4. 建立通過三組輪胎底部的 V 型透視地面鏡像線，並在中間前輪轉折處平滑化
         const rawMirror = new Float32Array(SW);
         for (let x = 0; x < SW; x++) {
-          let lineY;
           if (x <= x2) {
             const t = (x - x1) / Math.max(1, x2 - x1);
-            lineY = adjY1 + t * (adjY2 - adjY1);
+            rawMirror[x] = adjY1 + t * (adjY2 - adjY1);
           } else {
             const t = (x - x2) / Math.max(1, x3 - x2);
-            lineY = adjY2 + t * (adjY3 - adjY2);
-          }
-
-          if (bottomY[x] > 0) {
-            const gap = Math.max(0, lineY - bottomY[x]);
-            const baseOffset = x <= x2
-              ? REFL_CONFIG.rearWheelOffsetY + (REFL_CONFIG.centerWheelOffsetY - REFL_CONFIG.rearWheelOffsetY) * Math.max(0, Math.min(1, (x - x1) / Math.max(1, x2 - x1)))
-              : REFL_CONFIG.centerWheelOffsetY + (REFL_CONFIG.farFrontWheelOffsetY - REFL_CONFIG.centerWheelOffsetY) * Math.max(0, Math.min(1, (x - x2) / Math.max(1, x3 - x2)));
-            rawMirror[x] = bottomY[x] + baseOffset + gap * REFL_CONFIG.gapRatio;
-          } else {
-            rawMirror[x] = lineY;
+            rawMirror[x] = adjY2 + t * (adjY3 - adjY2);
           }
         }
 
-        // 平滑化反射基準線，確保鋁圈與車身線條圓潤不變形
         const smoothMirror = new Float32Array(SW);
-        const radius = 10;
+        const smoothRadius = 18;
         for (let x = 0; x < SW; x++) {
           let sum = 0, cnt = 0;
-          for (let k = -radius; k <= radius; k++) {
-            const nx = x + k;
-            if (nx >= xLeft && nx <= xRight) {
-              sum += rawMirror[nx];
-              cnt++;
-            }
+          for (let k = -smoothRadius; k <= smoothRadius; k++) {
+            const nx = Math.min(SW - 1, Math.max(0, x + k));
+            sum += rawMirror[nx];
+            cnt++;
           }
-          smoothMirror[x] = cnt > 0 ? sum / cnt : rawMirror[x];
+          smoothMirror[x] = sum / cnt;
         }
 
-        // 5. 逐列繪製四輪緊貼的垂直翻轉鏡面倒影
-        const reflCanvas = document.createElement('canvas');
-        reflCanvas.width = SW;
-        reflCanvas.height = SH;
+        // 5. 在反射畫布上逐列繪製四輪緊貼的鏡面倒影
         const rCtx = reflCanvas.getContext('2d');
+        rCtx.globalCompositeOperation = 'source-over';
+        rCtx.clearRect(0, 0, SW, SH);
 
         for (let x = xLeft; x <= xRight; x++) {
-          const bY = bottomY[x];
-          if (bY <= 0) continue;
-          const destStartY = smoothMirror[x];
-          const reflH = bY * REFL_CONFIG.scaleY;
+          const mirrorY = Math.round(smoothMirror[x]);
+          if (mirrorY <= 10 || mirrorY >= SH) continue;
+          const destH = Math.round(mirrorY * REFL_CONFIG.scaleY);
 
-          rCtx.save();
-          rCtx.translate(0, destStartY);
-          rCtx.scale(1, -REFL_CONFIG.scaleY);
-          rCtx.drawImage(stageCarCanvas, x, 0, 1, bY, x, -bY, 1, bY);
-          rCtx.restore();
+          rCtx.drawImage(
+            flippedCanvas,
+            x, SH - mirrorY, 1, mirrorY,
+            x, mirrorY, 1, destH
+          );
         }
 
-        // 6. 沿著 V 型四輪接地線進行由上而下的自然漸層消散遮罩
-        const fadeCanvas = document.createElement('canvas');
-        fadeCanvas.width = 1;
-        fadeCanvas.height = 256;
-        const fCtx = fadeCanvas.getContext('2d');
-        const grad = fCtx.createLinearGradient(0, 0, 0, 256);
+        // 6. 在獨立的 maskCanvas 建立完整 V 型漸層遮罩，最後一次性套用 destination-in
+        const maskCanvas = document.createElement('canvas');
+        maskCanvas.width = SW;
+        maskCanvas.height = SH;
+        const mCtx = maskCanvas.getContext('2d');
+
+        const gradStrip = document.createElement('canvas');
+        gradStrip.width = 1;
+        gradStrip.height = 256;
+        const gCtx = gradStrip.getContext('2d');
+        const grad = gCtx.createLinearGradient(0, 0, 0, 256);
         grad.addColorStop(0, 'rgba(0, 0, 0, 1)');
-        grad.addColorStop(0.38, 'rgba(0, 0, 0, 0.48)');
-        grad.addColorStop(0.78, 'rgba(0, 0, 0, 0.08)');
+        grad.addColorStop(0.42, 'rgba(0, 0, 0, 0.50)');
+        grad.addColorStop(0.80, 'rgba(0, 0, 0, 0.10)');
         grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        fCtx.fillStyle = grad;
-        fCtx.fillRect(0, 0, 1, 256);
+        gCtx.fillStyle = grad;
+        gCtx.fillRect(0, 0, 1, 256);
+
+        const fadeLen = Math.round(drawH * REFL_CONFIG.fadeHeightRatio);
+        for (let x = xLeft; x <= xRight; x++) {
+          mCtx.drawImage(gradStrip, 0, 0, 1, 256, x, Math.round(smoothMirror[x]) - 2, 1, fadeLen);
+        }
 
         rCtx.globalCompositeOperation = 'destination-in';
-        const fadeLen = drawH * REFL_CONFIG.fadeHeightRatio;
-        for (let x = xLeft; x <= xRight; x++) {
-          rCtx.drawImage(fadeCanvas, 0, 0, 1, 256, x, smoothMirror[x] - 2, 1, fadeLen);
-        }
-
-        const reflDataUrl = reflCanvas.toDataURL('image/png');
-        stageImageCache[cacheKey] = { mainUrl: alignedMainUrl, reflUrl: reflDataUrl };
-
-        imgEl.dataset.aligned = '1';
-        imgEl.src = alignedMainUrl;
-        reflEl.src = reflDataUrl;
+        rCtx.drawImage(maskCanvas, 0, 0);
+        rCtx.globalCompositeOperation = 'source-over';
       } catch (e) {
-        reflEl.src = imgEl.src;
+        console.warn('建立四輪鏡面倒影失敗:', e);
       }
     }
 
@@ -1070,12 +1051,8 @@
       const mainEl = document.getElementById('teslaCarMain');
       document.getElementById('teslaMissingTip').classList.remove('show');
       mainEl.style.opacity = '1';
-      document.getElementById('teslaCarReflection').style.opacity = '0.45';
-      if (mainEl.dataset.aligned !== '1') {
-        buildFourWheelReflection(mainEl);
-      } else {
-        mainEl.dataset.aligned = '0';
-      }
+      document.getElementById('teslaCarReflection').style.opacity = '0.48';
+      buildFourWheelReflection(mainEl);
     }
 
     function onCarImageError() {
