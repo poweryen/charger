@@ -79,7 +79,7 @@
     .flow-line.charging::after { content: ''; position: absolute; top: 0; left: -35%; width: 35%; height: 100%; background: linear-gradient(90deg, transparent, #4ade80, transparent); animation: flowAnim 1.1s linear infinite; }
     @keyframes flowAnim { 0% { left: -35%; } 100% { left: 100%; } }
 
-    /* ==================== 特斯拉原廠 UI 風格：展間白光背光 + 壓地黑影 + 鏡面倒影 + 垂墜綠光充電線 ==================== */
+    /* ==================== 特斯拉原廠 UI 風格：展間白光背光 + 全車底盤陰影 + 鏡面倒影 + 垂墜綠光充電線 ==================== */
     .tesla-stage-card {
       display: none;
       position: relative;
@@ -133,28 +133,26 @@
       z-index: 1;
     }
 
-    /* 四輪貼合鏡面倒影畫布（置於 z-index: 2，柔焦處理還原微霧鏡面地板質感） */
+    /* 四輪貼合鏡面倒影畫布（置於 z-index: 2） */
     .tesla-car-reflection {
       position: absolute;
       inset: 0;
       width: 100%;
       height: 100%;
       opacity: 0.36;
-      filter: blur(2.4px) brightness(0.76) contrast(1.12);
+      filter: blur(2.2px) brightness(0.76) contrast(1.12);
       pointer-events: none;
       z-index: 2;
     }
 
-    /* 車底與倒影交界處的環境遮蔽黑影 (Ambient Occlusion，置於 z-index: 3 壓在倒影上方、車體下方) */
-    .tesla-contact-shadow {
+    /* 全車底盤立體壓地陰影畫布（置於 z-index: 3，完整涵蓋車尾、側裙、四輪與前保桿正下方） */
+    .tesla-underbody-shadow {
       position: absolute;
-      left: 14%;
-      width: 70%;
-      bottom: 24.5%;
-      height: 9.5%;
-      background: radial-gradient(ellipse at 48% 50%, rgba(0, 0, 0, 0.96) 22%, rgba(0, 0, 0, 0.72) 56%, transparent 82%);
-      transform: rotate(5.5deg) skewX(-12deg);
-      filter: blur(4.5px);
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0.92;
+      filter: blur(6.5px);
       pointer-events: none;
       z-index: 3;
     }
@@ -168,7 +166,6 @@
       height: 64%;
       object-fit: contain;
       object-position: center bottom;
-      filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.8));
       pointer-events: none;
       z-index: 4;
     }
@@ -357,7 +354,7 @@
     </div>
   </div>
 
-  <!-- 特斯拉原廠 UI 風格：展間亮白聚光 + 車底壓地黑影 + 貼地鏡面倒影 + 微型充電槍與自然垂墜綠光電流 -->
+  <!-- 特斯拉原廠 UI 風格：展間亮白聚光 + 全車底盤立體陰影 + 貼地鏡面倒影 + 微型充電槍與自然垂墜綠光電流 -->
   <div class="tesla-stage-card" id="teslaChargingStage" onclick="promptCarPhotoUpload()">
     <input type="file" id="carPhotoInput" accept="image/*" style="display: none;" onchange="onCarPhotoSelected(event)" />
     <div class="tesla-stage-wrap">
@@ -365,11 +362,11 @@
       <div class="tesla-studio-backlight"></div>
       <div class="tesla-floor-glow"></div>
 
-      <!-- 鏡面倒影畫布（置於黑影下方，由 Canvas 緊貼車底與四輪生成） -->
+      <!-- 鏡面倒影畫布（置於全車陰影下方） -->
       <canvas id="teslaCarReflection" class="tesla-car-reflection" width="1000" height="625"></canvas>
 
-      <!-- 車底與倒影交界處的環境遮蔽黑影（夾在車體與倒影之間，消除浮空感） -->
-      <div class="tesla-contact-shadow"></div>
+      <!-- 全車底盤立體陰影畫布（自動依車尾、側裙、四輪與前保桿 V 型輪廓繪製） -->
+      <canvas id="teslaUnderbodyShadow" class="tesla-underbody-shadow" width="1000" height="625"></canvas>
 
       <!-- 實車去背主圖層 -->
       <img id="teslaCarMain" class="tesla-car-main" alt="Charging EV" onerror="onCarImageError()" onload="onCarImageLoad()" />
@@ -838,14 +835,14 @@
       return 'car-badge car-default';
     }
 
-    // ==================== 【車子四輪鏡面倒影與車底黑影微調區】 ====================
+    // ==================== 【車子四輪鏡面倒影與全車底盤陰影微調區】 ====================
     const REFL_CONFIG = {
-      offsetY: -2,              // 整體倒影上下貼合微調 (px)：負數往上貼緊車底、正數往下移
-      skirtHugRatio: 0.72,      // 側裙與前保桿貼合度 (0 ~ 1)：越大越緊貼前保桿與車門下緣
-      scaleY: 0.52,             // 倒影垂直延伸長度比例（預設 0.52）
-      fadeHeightRatio: 0.40,    // 倒影往下漸層消散的長度比例（預設 0.40）
-      seamShadowStrength: 0.88, // 車底與倒影交界處「壓地黑影」濃度 (0 ~ 1)：越大交界處越深邃
-      seamShadowHeight: 24      // 車底壓地黑影的柔和擴散高度 (px)
+      offsetY: -2,           // 整體倒影上下貼合微調 (px)：負數往上貼緊車底、正數往下移
+      skirtHugRatio: 0.65,   // 側裙與前保桿倒影貼合度 (0 ~ 1)：越大越緊貼前保桿與車門下緣
+      scaleY: 0.52,          // 倒影垂直延伸長度比例（預設 0.52）
+      fadeHeightRatio: 0.40, // 倒影往下漸層消散的長度比例（預設 0.40）
+      shadowOpacity: 0.92,   // 全車底盤陰影濃度 (0 ~ 1)：越大車底越深邃
+      shadowSpreadY: 22      // 全車底盤陰影往下擴散範圍 (px)：越大地面陰影越寬厚
     };
 
     function getCarImageSource(carType) {
@@ -854,10 +851,11 @@
       return carType === 'n7' ? 'n7.png' : 'bria.png';
     }
 
-    // 建立無斷層的四輪貼地鏡面倒影，並在車底交界處繪製深色壓地黑影 (Ambient Occlusion)
+    // 建立四輪貼地鏡面倒影 + 涵蓋車尾、側裙、四輪與前保桿的「全車底盤立體陰影」
     function buildFourWheelReflection(imgEl) {
       const reflCanvas = document.getElementById('teslaCarReflection');
-      if (!reflCanvas) return;
+      const shadowCanvas = document.getElementById('teslaUnderbodyShadow');
+      if (!reflCanvas || !shadowCanvas) return;
 
       try {
         const w = imgEl.naturalWidth;
@@ -970,7 +968,7 @@
           }
         }
 
-        // 4. 計算局部輪胎平底包絡線 localMaxY[x]（避免圓形輪胎邊緣內縮變形，同時緊貼側裙與前保桿）
+        // 4. 計算局部輪胎平底包絡線 localMaxY[x] 與 V 型透視地面基準線 vLineArr[x]
         const localMaxY = new Float32Array(SW);
         const envWin = 22;
         for (let x = 0; x < SW; x++) {
@@ -982,7 +980,7 @@
           localMaxY[x] = m > 0 ? m : y2;
         }
 
-        // 結合 V 型輪底基準線與局部車底包絡線
+        const vLineArr = new Float32Array(SW);
         const rawMirror = new Float32Array(SW);
         const rawSampleY = new Float32Array(SW);
         for (let x = 0; x < SW; x++) {
@@ -994,27 +992,67 @@
             const t = (x - x2) / Math.max(1, x3 - x2);
             vLine = y2 + t * (y3 - y2);
           }
+          vLineArr[x] = vLine;
           rawMirror[x] = vLine * (1 - REFL_CONFIG.skirtHugRatio) + localMaxY[x] * REFL_CONFIG.skirtHugRatio + REFL_CONFIG.offsetY;
           rawSampleY[x] = localMaxY[x];
         }
 
-        // 平滑化曲線，確保反射輪廓滑順自然
+        // 平滑化 V 型地面線與反射基準線
+        const smoothVLine = new Float32Array(SW);
         const smoothMirror = new Float32Array(SW);
         const smoothSampleY = new Float32Array(SW);
-        const smoothRadius = 20;
+        const smoothRadius = 22;
         for (let x = 0; x < SW; x++) {
-          let sumM = 0, sumS = 0, cnt = 0;
+          let sumV = 0, sumM = 0, sumS = 0, cnt = 0;
           for (let k = -smoothRadius; k <= smoothRadius; k++) {
             const nx = Math.min(xRight, Math.max(xLeft, x + k));
+            sumV += vLineArr[nx];
             sumM += rawMirror[nx];
             sumS += rawSampleY[nx];
             cnt++;
           }
+          smoothVLine[x] = sumV / cnt;
           smoothMirror[x] = sumM / cnt;
           smoothSampleY[x] = sumS / cnt;
         }
 
-        // 5. 逐列從車底真實邊緣 (srcY) 取樣並繪製到平滑反射線上 (destY)，徹底消除前保桿下方透明斷層
+        // 5. 繪製「全車底盤立體陰影」(#teslaUnderbodyShadow)：完整填滿車底與 V 型地面之間，並柔和向外擴散
+        shadowCanvas.style.opacity = String(REFL_CONFIG.shadowOpacity);
+        const shCtx = shadowCanvas.getContext('2d');
+        shCtx.clearRect(0, 0, SW, SH);
+
+        const spreadY = REFL_CONFIG.shadowSpreadY;
+        const padX = 14;
+        for (let x = Math.max(0, xLeft - padX); x <= Math.min(SW - 1, xRight + padX); x++) {
+          const clampedX = Math.min(xRight, Math.max(xLeft, x));
+          const carEdgeY = bottomY[clampedX] > 0 ? bottomY[clampedX] : smoothSampleY[clampedX];
+          const groundY = Math.max(carEdgeY, smoothVLine[clampedX]);
+
+          // 陰影頂端稍微收入車底邊緣內側 6px，消除車底與地面之間的發亮空隙
+          const shadowTop = carEdgeY - 6;
+          const shadowBot = groundY + spreadY;
+          const totalH = Math.max(8, shadowBot - shadowTop);
+
+          // 車尾與車頭兩側邊緣自然圓潤收尾
+          let edgeAlpha = 1;
+          const distLeft = x - (xLeft - padX);
+          const distRight = (xRight + padX) - x;
+          const taperW = padX + carW * 0.045;
+          if (distLeft < taperW) edgeAlpha = Math.max(0, distLeft / taperW);
+          else if (distRight < taperW) edgeAlpha = Math.max(0, distRight / taperW);
+          edgeAlpha = Math.pow(edgeAlpha, 1.4);
+
+          const colGrad = shCtx.createLinearGradient(0, shadowTop, 0, shadowBot);
+          colGrad.addColorStop(0, `rgba(4, 5, 8, ${(0.92 * edgeAlpha).toFixed(3)})`);
+          colGrad.addColorStop(0.48, `rgba(4, 5, 8, ${(0.88 * edgeAlpha).toFixed(3)})`);
+          colGrad.addColorStop(0.76, `rgba(4, 5, 8, ${(0.42 * edgeAlpha).toFixed(3)})`);
+          colGrad.addColorStop(1, 'rgba(4, 5, 8, 0)');
+
+          shCtx.fillStyle = colGrad;
+          shCtx.fillRect(x, shadowTop, 1, totalH);
+        }
+
+        // 6. 繪製四輪貼地鏡面倒影 (#teslaCarReflection)
         const rCtx = reflCanvas.getContext('2d');
         rCtx.globalCompositeOperation = 'source-over';
         rCtx.clearRect(0, 0, SW, SH);
@@ -1032,7 +1070,7 @@
           );
         }
 
-        // 6. 建立獨立的 V 型漸層消散遮罩並一次性套用
+        // 7. 套用獨立 V 型漸層消散遮罩
         const maskCanvas = document.createElement('canvas');
         maskCanvas.width = SW;
         maskCanvas.height = SH;
@@ -1057,31 +1095,9 @@
 
         rCtx.globalCompositeOperation = 'destination-in';
         rCtx.drawImage(maskCanvas, 0, 0);
-
-        // 7. 在車底與倒影交界處疊加「貼地環境遮蔽黑影 (Seam Ambient Occlusion)」，讓車身與倒影自然融合
-        const aoStrip = document.createElement('canvas');
-        aoStrip.width = 1;
-        aoStrip.height = 64;
-        const aoCtx = aoStrip.getContext('2d');
-        const aoGrad = aoCtx.createLinearGradient(0, 0, 0, 64);
-        const s = REFL_CONFIG.seamShadowStrength;
-        aoGrad.addColorStop(0, `rgba(0, 0, 0, 0)`);
-        aoGrad.addColorStop(0.25, `rgba(5, 6, 10, ${s})`);
-        aoGrad.addColorStop(0.55, `rgba(5, 6, 10, ${s * 0.75})`);
-        aoGrad.addColorStop(1, `rgba(5, 6, 10, 0)`);
-        aoCtx.fillStyle = aoGrad;
-        aoCtx.fillRect(0, 0, 1, 64);
-
-        rCtx.globalCompositeOperation = 'source-atop';
-        const aoH = REFL_CONFIG.seamShadowHeight;
-        for (let x = xLeft; x <= xRight; x++) {
-          if (bottomY[x] <= 0) continue;
-          rCtx.drawImage(aoStrip, 0, 0, 1, 64, x, Math.round(smoothMirror[x]) - 6, 1, aoH);
-        }
-
         rCtx.globalCompositeOperation = 'source-over';
       } catch (e) {
-        console.warn('建立四輪鏡面倒影失敗:', e);
+        console.warn('建立四輪鏡面倒影與全車底盤陰影失敗:', e);
       }
     }
 
