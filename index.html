@@ -132,7 +132,7 @@
       z-index: 1;
     }
 
-    /* 全車底盤立體壓地陰影畫布（置於 z-index: 2，填滿車底與地面縫隙，不遮蓋輪胎倒影） */
+    /* 全車底盤立體壓地陰影畫布（置於 z-index: 2，緊貼車底與四輪，不遮擋倒影） */
     .tesla-underbody-shadow {
       position: absolute;
       inset: 0;
@@ -144,7 +144,7 @@
       z-index: 2;
     }
 
-    /* 四輪貼合鏡面倒影畫布（置於 z-index: 3，直接顯現於輪胎正下方） */
+    /* 四輪貼合鏡面倒影畫布（置於 z-index: 3） */
     .tesla-car-reflection {
       position: absolute;
       inset: 0;
@@ -847,30 +847,43 @@
       return 'car-badge car-default';
     }
 
-    // ==================== 【車子倒影位置、前後輪斜度與車頭距離調整區】 ====================
+    // ==================== 【車子倒影與陰影參數調整區】 ====================
     const REFL_CONFIG = {
-      // 1. 整體倒影上下移動 (預設 4)
-      //    👉 數字調大 (例如 10、15)：整片倒影會明顯「往下移」
-      //    👉 數字調小 (例如 0、-5) ：整片倒影會明顯「往上移」
-      moveDown: 10,
+      // 1. 整體倒影上下移動 (預設 2)
+      //    👉 數字調大 (例如 6、10)：整片倒影一起「往下移動」
+      //    👉 數字調小 (例如 0、-4)：整片倒影一起「往上移動」
+      moveDown: 2,
 
-      // 2. 左側「後輪 ↔ 前輪」對齊斜度 (預設 13.5 度)
-      //    👉 數字調大 (例如 16)：左邊「後輪倒影」往上提（貼近後輪）
-      //    👉 數字調小 (例如 10)：左邊「後輪倒影」往下移（遠離後輪）
-      leftTiltDeg: 13.5,
+      // 2. 左側倒影距離：後輪與左側車門 (預設 0)
+      //    👉 數字調大 (例如 4、8)  ：左側與後輪倒影「往下拉開距離」
+      //    👉 數字調小 (例如 -3、-6)：左側與後輪倒影「往上貼近後輪」
+      leftSideGap: 0,
 
-      // 3. 右側「車頭前保桿」倒影拉開距離 (預設 28)
-      //    👉 數字調大 (例如 38、48)：車頭前保桿倒影會「往下退開、離前保桿更遠」
-      //    👉 數字調小 (例如 15、10)：車頭前保桿倒影會「往上靠近前保桿」
-      frontBumperGap: 58,
+      // 3. 左側斜度：後輪 ↔ 中間前輪對齊角度 (預設 14.5 度)
+      //    👉 數字調大 (例如 17、20)：左端(後輪)倒影「往左上提」
+      //    👉 數字調小 (例如 11、8) ：左端(後輪)倒影「往左下壓」
+      leftTiltDeg: 14.5,
 
-      // 4. 倒影垂直延伸長度比例 (預設 0.58) 與漸層消散長度 (預設 0.42)
+      // 4. 右側倒影距離：車頭前保桿與右前輪 (預設 6)
+      //    👉 數字調大 (例如 10、15)：車頭前保桿倒影「往下退開、離前保桿更遠」
+      //    👉 數字調小 (例如 2、0)  ：車頭前保桿倒影「往上靠近前保桿」
+      rightSideGap: 6,
+
+      // 5. 右側斜度：中間前輪 ↔ 車頭前保桿對齊角度 (預設 2.0 度)
+      //    👉 數字調大 (例如 6、10) ：車頭最右端倒影「往右上翹起」
+      //    👉 數字調小 (例如 0、-3) ：車頭最右端倒影「往右下壓低(遠離前保桿)」
+      rightTiltDeg: 2.0,
+
+      // 6. 左右分界中心點 (預設 0.48 代表中間前輪的位置)
+      pivotXRatio: 0.48,
+
+      // 7. 倒影垂直延伸長度比例 (預設 0.58) 與漸層消散長度 (預設 0.42)
       scaleY: 0.58,
       fadeHeightRatio: 0.42,
 
-      // 5. 全車底盤陰影濃度 (0 ~ 1) 與往下擴散高度
+      // 8. 全車底盤陰影濃度 (0 ~ 1) 與往下擴散高度 (px)
       shadowOpacity: 0.90,
-      shadowSpreadY: 22
+      shadowSpreadY: 20
     };
 
     // 依序嘗試載入 GitHub 資料夾內的車圖檔名
@@ -883,7 +896,7 @@
       mainEl.src = list[0];
     }
 
-    // 依 REFL_CONFIG 建立前後輪貼合且車頭保桿自然拉開距離的鏡面倒影与全車底盤陰影
+    // 依 REFL_CONFIG 建立左右獨立距離與斜度的鏡面倒影 + 全車底盤陰影
     function buildFourWheelReflection(imgEl) {
       const reflCanvas = document.getElementById('teslaCarReflection');
       const shadowCanvas = document.getElementById('teslaUnderbodyShadow');
@@ -945,7 +958,7 @@
         flCtx.scale(1, -1);
         flCtx.drawImage(stageCarCanvas, 0, 0);
 
-        // 掃描每一列 X 的車底實體像素點 bottomY[x]（提高 Alpha 門檻至 95，過濾去背殘留半透明邊緣）
+        // 掃描每一列 X 的車底實體像素點 bottomY[x]
         const sData = sCtx.getImageData(0, 0, SW, SH).data;
         const bottomY = new Int32Array(SW).fill(-1);
         let xLeft = SW - 1, xRight = 0;
@@ -963,8 +976,9 @@
 
         const carW = Math.max(10, xRight - xLeft);
 
-        // 3. 定位中間前輪最低點 (x2Car, y2Car) 與左側後輪最低點 (x1Car, y1Car)
-        let x2Car = Math.round(xLeft + carW * 0.48);
+        // 3. 定位三處車輪接地參考點：P1(左後輪)、P2(中間前輪分界點)、P3(右側遠端前輪)
+        const pivotX = Math.round(xLeft + carW * REFL_CONFIG.pivotXRatio);
+        let x2Car = pivotX;
         let y2Car = -1;
         for (let x = Math.round(xLeft + carW * 0.35); x <= Math.round(xLeft + carW * 0.60); x++) {
           if (bottomY[x] > y2Car) {
@@ -987,40 +1001,57 @@
           }
         }
 
-        // 4. 計算每一列的來源取樣點 srcBaseY[x] 與倒影繪製起點 destLineY[x]
-        //    - 左半部 (x <= x2Car)：沿著「後輪 <-> 前輪」斜度對齊，使前後輪倒影緊貼原車輪胎
-        //    - 右半部 (x > x2Car，即車頭前保桿區)：直接從車頭保桿下緣往下拉開 frontBumperGap 距離，避免前保桿倒影貼太近
-        const movePx = REFL_CONFIG.moveDown * 3.0;
+        let x3Car = Math.round(xLeft + carW * 0.86);
+        let y3Car = bottomY[x3Car] > 0 ? bottomY[x3Car] : y2Car - 22;
+        let minSlopeR = Infinity;
+        for (let x = Math.round(xLeft + carW * 0.75); x <= Math.round(xLeft + carW * 0.95); x++) {
+          if (bottomY[x] > 0 && x > x2Car) {
+            const slope = (y2Car - bottomY[x]) / (x - x2Car);
+            if (slope < minSlopeR) {
+              minSlopeR = slope;
+              x3Car = x;
+              y3Car = bottomY[x];
+            }
+          }
+        }
+
+        // 4. 計算來源取樣基準線 rawSrcBase[x] 與使用者自訂的倒影位置線 rawDestLine[x]
+        const movePx = REFL_CONFIG.moveDown * 4.0;
+        const leftGapPx = REFL_CONFIG.leftSideGap * 4.0;
+        const rightGapPx = REFL_CONFIG.rightSideGap * 4.0;
         const leftSlope = Math.tan((REFL_CONFIG.leftTiltDeg * Math.PI) / 180);
+        const rightSlope = Math.tan((REFL_CONFIG.rightTiltDeg * Math.PI) / 180);
 
         const rawSrcBase = new Float32Array(SW);
         const rawDestLine = new Float32Array(SW);
 
         for (let x = 0; x < SW; x++) {
           const carEdge = bottomY[x] > 0 ? bottomY[x] : y2Car;
-          if (x <= x2Car) {
-            // 左側後輪到中間前輪
+          if (x <= pivotX) {
+            // 左半部 (後輪 ↔ 中間前輪)：受 moveDown、leftSideGap、leftTiltDeg 控制
             const t = (x - x1Car) / Math.max(1, x2Car - x1Car);
             const wheelLine = y1Car + t * (y2Car - y1Car);
             rawSrcBase[x] = Math.max(carEdge, wheelLine);
-            rawDestLine[x] = (y2Car - (x2Car - x) * leftSlope) + movePx;
-          } else {
-            // 右側車頭前保桿區：直接從保桿實邊緣取樣，並將繪製點往下拉開 frontBumperGap
-            const rightProgress = Math.min(1, (x - x2Car) / Math.max(1, (xRight - x2Car) * 0.45));
-            const smoothCurve = rightProgress * rightProgress * (3 - 2 * rightProgress);
-            const extraGap = REFL_CONFIG.frontBumperGap * smoothCurve;
 
-            rawSrcBase[x] = carEdge;
-            const wheelFloorY = y2Car - (x - x2Car) * 0.04;
-            const bumperDroppedY = carEdge + extraGap;
-            rawDestLine[x] = Math.max(wheelFloorY * 0.4 + bumperDroppedY * 0.6, bumperDroppedY) + movePx;
+            const distL = pivotX - x;
+            const blendL = Math.min(1, distL / 35);
+            rawDestLine[x] = (y2Car + movePx) + (leftGapPx * blendL) - (distL * leftSlope);
+          } else {
+            // 右半部 (中間前輪 ↔ 車頭前保桿)：受 moveDown、rightSideGap、rightTiltDeg 控制
+            const t = (x - x2Car) / Math.max(1, x3Car - x2Car);
+            const wheelLineR = y2Car + t * (y3Car - y2Car);
+            rawSrcBase[x] = Math.max(carEdge, wheelLineR);
+
+            const distR = x - pivotX;
+            const blendR = Math.min(1, distR / 35);
+            rawDestLine[x] = (y2Car + movePx) + (rightGapPx * blendR) - (distR * rightSlope);
           }
         }
 
-        // 平滑化曲線，消除轉折處鋸齒
+        // 平滑化取樣線與繪製線
         const smoothSrcBase = new Float32Array(SW);
         const smoothDestLine = new Float32Array(SW);
-        const r = 12;
+        const r = 10;
         for (let x = 0; x < SW; x++) {
           let sSum = 0, dSum = 0, cnt = 0;
           for (let k = -r; k <= r; k++) {
@@ -1033,7 +1064,7 @@
           smoothDestLine[x] = dSum / cnt;
         }
 
-        // 5. 繪製「全車底盤立體陰影」(#teslaUnderbodyShadow，位於 z-index: 2，填滿車底、前保桿與倒影之間的空隙)
+        // 5. 繪製「全車底盤立體陰影」(#teslaUnderbodyShadow，錨定於車體底部，不隨倒影下移而變形)
         shadowCanvas.style.opacity = String(REFL_CONFIG.shadowOpacity);
         const shCtx = shadowCanvas.getContext('2d');
         shCtx.clearRect(0, 0, SW, SH);
@@ -1043,7 +1074,7 @@
         for (let x = Math.max(0, xLeft - padX); x <= Math.min(SW - 1, xRight + padX); x++) {
           const clampedX = Math.min(xRight, Math.max(xLeft, x));
           const carEdgeY = bottomY[clampedX] > 0 ? bottomY[clampedX] : smoothSrcBase[clampedX];
-          const groundY = Math.max(carEdgeY, smoothDestLine[clampedX]);
+          const groundY = Math.max(carEdgeY, smoothSrcBase[clampedX]);
 
           const shadowTop = carEdgeY - 4;
           const shadowBot = groundY + spreadY;
@@ -1059,15 +1090,15 @@
 
           const colGrad = shCtx.createLinearGradient(0, shadowTop, 0, shadowBot);
           colGrad.addColorStop(0, `rgba(4, 5, 8, ${(0.95 * edgeAlpha).toFixed(3)})`);
-          colGrad.addColorStop(0.50, `rgba(4, 5, 8, ${(0.86 * edgeAlpha).toFixed(3)})`);
-          colGrad.addColorStop(0.78, `rgba(4, 5, 8, ${(0.40 * edgeAlpha).toFixed(3)})`);
+          colGrad.addColorStop(0.50, `rgba(4, 5, 8, ${(0.84 * edgeAlpha).toFixed(3)})`);
+          colGrad.addColorStop(0.78, `rgba(4, 5, 8, ${(0.38 * edgeAlpha).toFixed(3)})`);
           colGrad.addColorStop(1, 'rgba(4, 5, 8, 0)');
 
           shCtx.fillStyle = colGrad;
           shCtx.fillRect(x, shadowTop, 1, totalH);
         }
 
-        // 6. 繪製四輪貼合且前保桿拉開距離的鏡面倒影 (#teslaCarReflection，位於 z-index: 3)
+        // 6. 繪製鏡面倒影 (#teslaCarReflection，位於 z-index: 3)
         const rCtx = reflCanvas.getContext('2d');
         rCtx.globalCompositeOperation = 'source-over';
         rCtx.clearRect(0, 0, SW, SH);
