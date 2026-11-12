@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>車位充電監控站</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -500,6 +500,34 @@
         max-width: 190px;
       }
     }
+
+    /* 登入、異常狀態與未分類帳單。 */
+    .pin-modal { max-width: 360px; }
+    .owner-label { display:block; text-align:left; font-size:13px; color:var(--text-sub); margin:12px 0 6px; }
+    .owner-input { display:block; width:100%; background:#101114; border:1px solid var(--border); border-radius:10px; padding:12px; color:var(--text-main); font-size:16px; }
+    .owner-input:focus { outline:2px solid #38bdf8; outline-offset:2px; }
+    .owner-remember { display:flex; gap:8px; align-items:center; margin:14px 0; font-size:13px; color:var(--text-sub); }
+    .owner-remember input { width:16px; height:16px; accent-color:#38bdf8; }
+    .pin-error { overflow-wrap:anywhere; height:auto; }
+    .status-badge.fault { color:#fca5a5; background:rgba(239,68,68,.12); border-color:rgba(239,68,68,.4); }
+    .flow-node.active-danger .flow-sub { color:#fca5a5; }
+    .flow-sub, .value, .car-badge { overflow-wrap:anywhere; }
+    .flow-sub { white-space:normal; }
+    .mode-switch-link { border:0; background:transparent; font:inherit; color:#38bdf8; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    button:focus-visible, select:focus-visible { outline:2px solid #38bdf8; outline-offset:3px; }
+    .unknown-summary { margin:0 0 14px; padding:12px; background:rgba(148,163,184,.05); border-radius:10px; font-size:12px; }
+    .history-message { color:#fbbf24; font-size:12px; line-height:1.5; overflow-wrap:anywhere; margin-bottom:8px; }
+    .split-header { flex-wrap:wrap; gap:6px; }
+    .filter-group { flex-wrap:wrap; justify-content:flex-end; }
+    @media (max-width:430px) {
+      .filter-group { gap:5px; }
+      .filter-select, .csv-btn { font-size:11px; padding:6px; }
+      .demo-banner { flex-wrap:wrap; }
+    }
+    @media (prefers-reduced-motion:reduce) {
+      *, *::before, *::after { animation:none !important; transition:none !important; }
+    }
   </style>
 </head>
 <body>
@@ -517,22 +545,26 @@
       </div>
       <div class="demo-actions">
         <button class="demo-btn" onclick="cycleDemoScenario()">🔄 切換情境</button>
-        <button class="demo-btn unlock" onclick="openPinModal()">🔐 屋主解鎖</button>
+        <button class="demo-btn unlock" onclick="openPinModal()">🔐 屋主登入</button>
       </div>
     </div>
 
-    <!-- 屋主 PIN 碼驗證彈窗（含 3次30秒 / 6次3分鐘 階梯式防暴力破解鎖定） -->
-    <div class="pin-modal-overlay" id="pinModalOverlay">
-      <div class="pin-modal">
-        <h3>🔐 屋主身分驗證</h3>
-        <p>請輸入 4 位數專屬通行碼<br>解鎖後此裝置將自動記憶通行證</p>
-        <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="pin-input" id="pinInput" placeholder="••••" oninput="onPinInput(this.value)" />
-        <div class="pin-error" id="pinError"></div>
+    <!-- Firebase 屋主登入；帳密交由 Firebase 驗證，不在 HTML 儲存 PIN。 -->
+    <div class="pin-modal-overlay" id="pinModalOverlay" role="dialog" aria-modal="true" aria-labelledby="ownerLoginTitle" aria-describedby="ownerLoginDescription">
+      <form class="pin-modal" id="authForm">
+        <h3 id="ownerLoginTitle">🔐 屋主登入</h3>
+        <p id="ownerLoginDescription">使用屋主的電子郵件與密碼<br>登入後查看真實充電資料</p>
+        <label class="owner-label" for="ownerEmail">電子郵件</label>
+        <input type="email" id="ownerEmail" class="owner-input" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" required />
+        <label class="owner-label" for="ownerPassword">密碼</label>
+        <input type="password" id="ownerPassword" class="owner-input" autocomplete="current-password" required />
+        <label class="owner-remember"><input type="checkbox" id="rememberOwner" checked /> 記住此裝置</label>
+        <div class="pin-error" id="pinError" role="status" aria-live="polite"></div>
         <div class="pin-modal-btns">
-          <button class="pin-modal-btn" onclick="closePinModal()">取消</button>
-          <button class="pin-modal-btn confirm" id="pinConfirmBtn" onclick="verifyPin()">確認解鎖</button>
+          <button type="button" class="pin-modal-btn" onclick="closePinModal()">取消</button>
+          <button type="submit" class="pin-modal-btn confirm" id="pinConfirmBtn">登入</button>
         </div>
-      </div>
+      </form>
     </div>
 
     <!-- 主內容區：手機直式單欄 / 電腦自動雙欄座艙 -->
@@ -663,7 +695,7 @@
               </text>
             </svg>
             <div class="label">即時充電功率</div>
-            <div class="gauge-sub" id="voltageSub">⚡ 線路狀態：<b>待命 (0V)</b></div>
+            <div class="gauge-sub" id="voltageSub">⚡ 即時電壓：<b>-- V</b></div>
           </div>
 
           <!-- 電流儀表 -->
@@ -736,11 +768,12 @@
                 <option value="all">全部車款</option>
                 <option value="bria">🟢 Bria</option>
                 <option value="n7">🔵 n7</option>
+                <option value="unknown">⚪ 未分類</option>
               </select>
               <select id="monthFilter" class="filter-select" onchange="onFilterChange()">
                 <option value="all">全部月份</option>
               </select>
-              <button class="csv-btn" onclick="exportCSV()">📥 匯出</button>
+              <button class="csv-btn" id="exportCsvBtn" onclick="exportCSV()">📥 匯出</button>
             </div>
           </div>
 
@@ -774,6 +807,13 @@
             </div>
           </div>
 
+          <div id="unknownSummary" class="unknown-summary" style="display:none;">
+            <div class="split-car-title"><span>⚪ 未分類車輛（不列入雙車帳單）</span><span id="unknownCount"></span></div>
+            <div class="split-stat-line"><span>累計電量</span><b id="unknownEnergy">-- kWh</b></div>
+            <div class="split-stat-line"><span>累計費用</span><b id="unknownCost">NT$ --</b></div>
+          </div>
+          <div id="historyMessage" class="history-message" role="status" aria-live="polite"></div>
+
           <div id="history-list" style="display: flex; flex-direction: column;">
             <div style="text-align: center; color: var(--text-sub); font-size: 13px; padding: 12px 0;">
               讀取歷史紀錄中...
@@ -789,32 +829,493 @@
     <div class="footer" id="footerBar">
       <span class="pulse" id="syncPulse"></span>
       <span id="syncStatusText">雲端即時同步中</span> • <span id="updateTime">-</span>
-      <span class="mode-switch-link" id="modeSwitchBtn" onclick="onFooterModeSwitch()">🎮 切換展示</span>
+      <button type="button" class="mode-switch-link" id="modeSwitchBtn" onclick="onFooterModeSwitch()">🔐 屋主登入</button>
     </div>
   </div>
 
-  <script>
-    const OWNER_PIN = "9133";
-    const STORAGE_KEY = "charger_owner_auth_v1";
-    const ATTEMPTS_KEY = "charger_pin_attempts_v1";
-    const LOCK_UNTIL_KEY = "charger_pin_lock_until_v1";
-    const FIREBASE_URL = "https://ha-charger-default-rtdb.firebaseio.com/charger.json";
-    const HISTORY_URL = "https://ha-charger-default-rtdb.firebaseio.com/history.json";
-
-    // 自動清除早期殘留的本機預覽快取，確保 100% 優先顯示 GitHub 資料夾內的 n7.png 與 bria.png
-    try {
-      localStorage.removeItem('custom_car_img_n7_v1');
-      localStorage.removeItem('custom_car_img_bria_v1');
-    } catch (e) {}
-
+  <script id="app-main">
+    // APP_MAIN_START
+    // 首次設定：從 Firebase Console 複製 Web 設定，並填入允許讀取的屋主 UID。
+    // 這些 Web 設定不是登入密碼；真正存取限制必須同時部署 database.rules.json。
+    const CONFIG = {
+      firebase: {
+        apiKey: 'AIzaSyDwXvx13cfyE5y6eOjPDvTkxDFJN0bwOrc',
+        authDomain: 'ha-charger.firebaseapp.com',
+        projectId: 'ha-charger',
+        appId: '1:344829875594:web:3653766a72f69ff4836473',
+        storageBucket: 'ha-charger.firebasestorage.app',
+        messagingSenderId: '344829875594',
+        databaseURL: 'https://ha-charger-default-rtdb.firebaseio.com'
+      },
+      ownerUids: ['B1kyIcrsHvWrWshcBeG2vLyrpsx2'],
+      realtimeIntervalMs: 3000,
+      historyIntervalMs: 30000,
+      requestTimeoutMs: 12000,
+      staleAfterMs: 10 * 60 * 1000,
+      // 舊版資料只提供 rate 時的顯示分類；HA 可用 is_off_peak 布林值覆寫。
+      offPeakRateMax: 2.2
+    };
+    const FIREBASE_URL = `${CONFIG.firebase.databaseURL.replace(/\/$/, '')}/charger.json`;
+    const HISTORY_URL = `${CONFIG.firebase.databaseURL.replace(/\/$/, '')}/history.json`;
+    const HISTORY_LIMIT = 5;
     let isOwnerAuthenticated = false;
-    let lockCountdownTimer = null;
+    let activeOwnerUid = '';
+    let modeGeneration = 0;
     let demoScenarioIndex = 0;
     let allHistoryRecords = [];
     let isHistoryExpanded = false;
+    let historyState = { kind: 'loading', message: '載入歷史紀錄中…' };
     let currentStageCarType = '';
     let candidateIdx = 0;
-    const HISTORY_LIMIT = 5;
+    let realtimeRequest = null;
+    let historyRequest = null;
+    let realtimeTimer = null;
+    let historyTimer = null;
+    let dashboardHasData = false;
+    let lastUpdatedAt = null;
+
+    function safeText(value, fallback = '') {
+      return typeof value === 'string' || (typeof value === 'number' && Number.isFinite(value))
+        ? String(value) : fallback;
+    }
+
+    function finiteNumber(value) {
+      if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+      if (typeof value !== 'string') return null;
+      const text = value.trim();
+      if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(text)) return null;
+      const number = Number(text);
+      return Number.isFinite(number) ? number : null;
+    }
+
+    function formatNumber(value, digits = 1) {
+      const number = finiteNumber(value);
+      return number === null ? '--' : number.toFixed(digits);
+    }
+
+    function setText(id, value) {
+      const element = document.getElementById(id);
+      if (element) element.textContent = safeText(value);
+    }
+
+    function parseTimestamp(value) {
+      const epoch = typeof value === 'number' ? finiteNumber(value) : null;
+      if (epoch !== null) {
+        const millis = Math.abs(epoch) < 1e11 ? epoch * 1000 : epoch;
+        return Number.isFinite(new Date(millis).getTime()) ? millis : null;
+      }
+      if (typeof value !== 'string' || !value.trim()) return null;
+      const text = value.trim();
+      if (/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:?\d{2})$/i.test(text)) {
+        const time = Date.parse(text);
+        return Number.isFinite(time) ? time : null;
+      }
+      // HA 舊格式無時區：明確視為台灣時間，不依賴查看者電腦的時區。
+      const parts = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?)?$/);
+      if (!parts) return null;
+      const [year, month, day, hour, minute, second] = parts.slice(1, 7).map(v => Number(v || 0));
+      const ms = Number((parts[7] || '').padEnd(3, '0'));
+      const utc = Date.UTC(year, month - 1, day, hour, minute, second, ms);
+      const check = new Date(utc);
+      if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 ||
+          check.getUTCDate() !== day || check.getUTCHours() !== hour ||
+          check.getUTCMinutes() !== minute || check.getUTCSeconds() !== second) return null;
+      return utc - 8 * 3600000;
+    }
+
+    function getVehicleType(vehicleName) {
+      const name = safeText(vehicleName).trim().toLowerCase();
+      if (/(?:^|[^a-z0-9])n7(?:$|[^a-z0-9])/.test(name)) return 'n7';
+      if (/(?:^|[^a-z0-9])bria(?:$|[^a-z0-9])/.test(name)) return 'bria';
+      return 'unknown';
+    }
+
+    function getVehicleBadgeClass(vehicleName) {
+      const type = getVehicleType(vehicleName);
+      return type === 'unknown' ? 'car-badge car-default' : `car-badge car-${type}`;
+    }
+
+    function getChargerState(status, power) {
+      const raw = safeText(status).trim();
+      const key = raw.toLowerCase().replace(/[\s_-]/g, '');
+      const states = {
+        charging: { key: 'charging', label: '⚡ 充電中', charging: true, plugged: true },
+        available: { key: 'available', label: '待命中' },
+        preparing: { key: 'preparing', label: '🔌 準備充電', plugged: true },
+        suspendedevse: { key: 'evse-paused', label: '⏸ 充電樁暫停送電', plugged: true },
+        suspendedev: { key: 'vehicle-paused', label: '⏸ 車輛暫停充電', plugged: true },
+        finishing: { key: 'finishing', label: '充電結束中', plugged: true },
+        reserved: { key: 'reserved', label: '已預約' },
+        faulted: { key: 'fault', label: '⚠️ 充電樁故障', error: true },
+        fault: { key: 'fault', label: '⚠️ 充電樁故障', error: true },
+        error: { key: 'fault', label: '⚠️ 充電樁故障', error: true },
+        unavailable: { key: 'offline', label: '⚠️ 充電樁不可用／離線', error: true },
+        offline: { key: 'offline', label: '⚠️ 充電樁離線', error: true },
+        unknown: { key: 'unknown', label: '狀態未知' }
+      };
+      // 明確狀態優先，殘留功率不能將故障／離線變成充電中。
+      const state = Object.prototype.hasOwnProperty.call(states, key) ? states[key]
+        : { key: 'unknown', label: raw ? `未識別狀態：${raw}` : '狀態未知' };
+      return { charging: false, plugged: false, error: false, ...state };
+    }
+
+    function normalizeDashboardPayload(data) {
+      if (!data || typeof data !== 'object' || Array.isArray(data) ||
+          Object.prototype.hasOwnProperty.call(data, 'error') ||
+          !['status', 'power', 'current', 'session_energy', 'month_energy'].some(k => Object.prototype.hasOwnProperty.call(data, k))) {
+        throw new Error(data === null ? '雲端尚無即時資料' : '即時資料格式不正確');
+      }
+      const normalized = { ...data };
+      for (const field of ['power', 'current', 'voltage', 'rate', 'session_energy', 'session_cost', 'month_energy', 'month_cost']) {
+        if (data[field] !== undefined && data[field] !== null && !['number', 'string'].includes(typeof data[field])) {
+          throw new Error(`即時資料 ${field} 欄位格式不正確`);
+        }
+        normalized[field] = finiteNumber(data[field]);
+      }
+      for (const field of ['status', 'vehicle', 'schedule', 'session_time', 'session_duration']) {
+        if (data[field] !== undefined && data[field] !== null && typeof data[field] !== 'string') {
+          throw new Error(`即時資料 ${field} 欄位格式不正確`);
+        }
+        normalized[field] = safeText(data[field]);
+      }
+      for (const field of ['updated_at', 'next_rate_change_at']) {
+        if (data[field] !== undefined && data[field] !== null && !['number', 'string'].includes(typeof data[field])) {
+          throw new Error(`即時資料 ${field} 欄位格式不正確`);
+        }
+      }
+      if (data.is_off_peak !== undefined && data.is_off_peak !== null && typeof data.is_off_peak !== 'boolean') {
+        throw new Error('即時資料 is_off_peak 欄位須為布林值');
+      }
+      return normalized;
+    }
+
+    function getRateInfo(data) {
+      const rate = finiteNumber(data.rate);
+      const offPeak = typeof data.is_off_peak === 'boolean' ? data.is_off_peak
+        : rate !== null && rate > 0 ? rate <= CONFIG.offPeakRateMax : null;
+      return { rate, offPeak };
+    }
+
+    function updateTouStatus(rate, scheduleStr, data = {}) {
+      const info = getRateInfo({ ...data, rate });
+      const badge = document.getElementById('touBadge');
+      badge.className = info.offPeak === null ? 'tou-pill' : `tou-pill ${info.offPeak ? 'off-peak' : 'peak'}`;
+      badge.textContent = info.offPeak === null ? '電價資料未知'
+        : `${info.offPeak ? '🟢 離峰' : '🟠 尖峰'} (${formatNumber(info.rate, 2)} 元/度)`;
+      const next = parseTimestamp(data.next_rate_change_at);
+      if (next !== null && next > Date.now()) {
+        const remaining = Math.ceil((next - Date.now()) / 60000);
+        setText('touCountdown', `⏳ 距離下次電價切換約 ${Math.floor(remaining / 60)} 小時 ${remaining % 60} 分`);
+      } else {
+        // 排程是充電窗口，不能直接當成台電電價切換時間。
+        setText('touCountdown', info.offPeak === null ? '等待 HA 更新電價資料'
+          : typeof data.is_off_peak === 'boolean' ? '依 HA 提供的電價時段顯示'
+          : '依目前費率判斷；電價切換時間尚未提供');
+      }
+    }
+
+    function updateSyncHealth(updatedAt, isError = false, isDemo = false, message = '') {
+      const footer = document.getElementById('footerBar');
+      const pulse = document.getElementById('syncPulse');
+      if (isDemo) {
+        footer.className = 'footer';
+        pulse.className = 'pulse demo';
+        setText('syncStatusText', '訪客展示模式運行中');
+        setText('updateTime', new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false }));
+        return;
+      }
+      const timestamp = parseTimestamp(updatedAt);
+      setText('updateTime', timestamp === null ? '--' : new Date(timestamp).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false }));
+      let stale = isError || timestamp === null;
+      let text = message || (isError ? '⚠️ 讀取失敗' : timestamp === null ? '⚠️ 更新時間缺失或格式錯誤' : '雲端即時同步中');
+      if (!isError && timestamp !== null) {
+        const age = Date.now() - timestamp;
+        if (age >= CONFIG.staleAfterMs) { stale = true; text = `訊號未更新 (已逾 ${Math.floor(age / 60000)} 分鐘)`; }
+        else if (age < -5 * 60000) { stale = true; text = '⚠️ 資料時間超前，請確認 HA 時間'; }
+      }
+      footer.className = stale ? 'footer stale' : 'footer';
+      pulse.className = stale ? 'pulse stale' : 'pulse';
+      setText('syncStatusText', text);
+    }
+
+    function updateGauge(needleId, valTextId, value, maxVal, unit) {
+      const number = finiteNumber(value);
+      const needle = document.getElementById(needleId);
+      const text = document.getElementById(valTextId);
+      if (needle) {
+        const ratio = number === null ? 0 : Math.min(Math.max(number / maxVal, 0), 1);
+        needle.style.transform = `rotate(${-90 + ratio * 180}deg)`;
+        needle.style.opacity = number === null ? '0.25' : '1';
+      }
+      if (text) {
+        const suffix = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+        suffix.setAttribute('font-size', '12');
+        suffix.setAttribute('font-weight', '500');
+        suffix.setAttribute('fill', '#9ca3af');
+        suffix.setAttribute('stroke', 'none');
+        suffix.textContent = unit;
+        text.replaceChildren(document.createTextNode(`${formatNumber(number, 2)} `), suffix);
+      }
+    }
+
+    function updateEnergyFlow(rate, status, power, vehicleName, tariff = {}) {
+      const state = getChargerState(status, power);
+      const info = getRateInfo({ ...tariff, rate });
+      document.getElementById('flowGridNode').className = info.offPeak === null ? 'flow-node' : `flow-node ${info.offPeak ? 'active-green' : 'active-amber'}`;
+      setText('flowGridTitle', info.offPeak === null ? '⚡ 台電電網' : info.offPeak ? '🟢 台電離峰電網' : '🟠 台電尖峰電網');
+      setText('flowGridSub', `${formatNumber(info.rate, 2)} 元/度`);
+      document.getElementById('flowEvseNode').className = `flow-node${state.error ? ' active-danger' : state.charging ? ' active-green' : state.plugged ? ' active-blue' : ''}`;
+      setText('flowEvseSub', state.charging ? `⚡ 送電 ${formatNumber(power, 2)} kW` : state.key === 'available' ? '待命／未充電' : state.label);
+      const type = getVehicleType(vehicleName);
+      const color = type === 'n7' ? '#38bdf8' : type === 'bria' ? '#4ade80' : 'var(--text-sub)';
+      document.getElementById('flowCarNode').className = `flow-node${state.charging || state.plugged ? type === 'n7' ? ' active-blue' : type === 'bria' ? ' active-green' : '' : ''}`;
+      setText('flowCarTitle', '🚗 車輛');
+      setText('flowCarSub', state.error || state.key === 'unknown' ? '連接狀態未確認'
+        : state.charging || state.plugged ? `${type === 'unknown' ? '🚗' : type === 'n7' ? '🔵' : '🟢'} ${safeText(vehicleName, '未分類車款') || '未分類車款'}` : '🅿️ 未充電待命');
+      document.getElementById('flowCarSub').style.color = color;
+      document.getElementById('flowLine1').className = state.charging ? 'flow-line charging' : 'flow-line';
+      document.getElementById('flowLine2').className = state.charging ? 'flow-line charging' : state.plugged ? 'flow-line standby' : 'flow-line';
+    }
+
+    function setDetailLine(id, label, value, color = '') {
+      const element = document.getElementById(id);
+      const strong = document.createElement('b');
+      strong.textContent = value;
+      if (color) strong.style.color = color;
+      element.replaceChildren(document.createTextNode(label), strong);
+    }
+
+    function applyDashboardData(data, isDemo = false) {
+      const power = finiteNumber(data.power);
+      const current = finiteNumber(data.current);
+      const state = getChargerState(data.status, power);
+      const badge = document.getElementById('statusBadge');
+      badge.textContent = state.label;
+      badge.className = `status-badge${state.charging ? ' charging' : state.error ? ' fault' : ''}`;
+      const schedule = safeText(data.schedule, '--') || '--';
+      setText('scheduleText', schedule);
+      updateTouStatus(data.rate, schedule, data);
+      updateEnergyFlow(data.rate, data.status, power, data.vehicle, data);
+      updateTeslaChargingStage(state.charging && getVehicleType(data.vehicle) !== 'unknown', safeText(data.vehicle));
+      updateGauge('needlePower', 'powerVal', power, 4.5, 'kW');
+      updateGauge('needleCurrent', 'currentVal', current, 20, 'A');
+      const voltage = finiteNumber(data.voltage);
+      if (voltage !== null) setDetailLine('voltageSub', '⚡ 即時電壓：', `${formatNumber(voltage, 1)} V`);
+      else if (state.charging && power !== null && current !== null && current > 0.5) setDetailLine('voltageSub', '⚡ 估算電壓：', `${formatNumber(power * 1000 / current, 1)} V`);
+      else setDetailLine('voltageSub', '⚡ 即時電壓：', '-- V');
+      const load = current === null ? null : Math.round(current / 16 * 100);
+      setDetailLine('loadSub', '🛡️ 16A 額定負載：', load === null ? '--' : `${load}%`, load === null ? '' : load > 100 ? '#f59e0b' : '#4ade80');
+
+      const vehicle = safeText(data.vehicle, '--') || '--';
+      const vehicleBadge = document.createElement('span');
+      vehicleBadge.className = getVehicleBadgeClass(vehicle);
+      vehicleBadge.textContent = vehicle;
+      document.getElementById('vehicleName').replaceChildren(vehicleBadge);
+      const rawTime = safeText(data.session_time);
+      const time = document.getElementById('sessionTime');
+      const divider = rawTime.indexOf(' ~ ');
+      if (divider >= 0) {
+        const start = document.createElement('div');
+        const end = document.createElement('div');
+        start.textContent = rawTime.slice(0, divider).trim();
+        end.textContent = `~ ${rawTime.slice(divider + 3).trim()}`;
+        if (state.charging) end.style.color = 'var(--accent)';
+        time.replaceChildren(start, end);
+      } else time.textContent = rawTime || '--';
+
+      const energy = finiteNumber(data.session_energy);
+      const cost = finiteNumber(data.session_cost);
+      // 0 是有效月累計；缺值也不能借用可能屬於上個月的 session。
+      const monthEnergy = finiteNumber(data.month_energy);
+      const monthCost = finiteNumber(data.month_cost);
+      const sessionKm = energy === null ? null : Math.round(energy * 6);
+      const monthKm = monthEnergy === null ? null : Math.round(monthEnergy * 6);
+      const average = monthEnergy !== null && monthCost !== null
+        ? monthEnergy > 0 ? monthCost / monthEnergy : monthEnergy === 0 && monthCost === 0 ? 0 : null : null;
+      const equiv = monthKm !== null && monthCost !== null && monthCost > 0 ? monthKm / (monthCost / 30) : null;
+      const dc = monthEnergy === null ? null : Math.round(monthEnergy * 6.5);
+      const gas = monthKm === null ? null : Math.round(monthKm / 12.5 * 30);
+      const savedDc = dc === null || monthCost === null ? null : Math.max(0, Math.round(dc - monthCost));
+      const savedGas = gas === null || monthCost === null ? null : Math.max(0, Math.round(gas - monthCost));
+      setText('sessionDuration', safeText(data.session_duration, '--') || '--');
+      setText('sessionEnergy', `${formatNumber(energy, 2)} kWh`);
+      setText('sessionKm', sessionKm === null ? '-- km' : `約 +${sessionKm} km`);
+      setText('rateVal', `${formatNumber(data.rate, 2)} 元/度`);
+      setText('sessionCost', `${formatNumber(cost, 1)} 元`);
+      setText('monthEnergy', `${formatNumber(monthEnergy, 1)} kWh`);
+      setText('monthCost', `${formatNumber(monthCost, 1)} 元`);
+      setText('avgRateVal', `${formatNumber(average, 2)} 元/度`);
+      setText('monthKm', monthKm === null ? '-- km' : `約 +${monthKm} km`);
+      setText('equivKmL', equiv === null ? '--' : `🔥 相當於 ${formatNumber(equiv, 1)} km/L`);
+      setText('dcCost', `約 NT$ ${formatNumber(dc, 0)} 元`);
+      setText('gasCost', `約 NT$ ${formatNumber(gas, 0)} 元`);
+      setText('savedDcMoney', `⚡ 淨省 NT$ ${formatNumber(savedDc, 0)} 元`);
+      setText('savedMoney', `💰 淨省 NT$ ${formatNumber(savedGas, 0)} 元`);
+      updateSyncHealth(data.updated_at, false, isDemo);
+    }
+
+    function requestIsCurrent(request) {
+      return request.generation === modeGeneration && isOwnerAuthenticated && request.uid === activeOwnerUid;
+    }
+
+    function describeReadError(error) {
+      if (error && error.code === 'charger/owner-denied') return '登入狀態已失效，請重新登入';
+      if (error && error.status === 401) return '登入憑證失效或權限不足，請重新登入並確認資料庫規則';
+      if (error && error.status === 403) return '沒有讀取權限，請確認屋主 UID 與資料庫規則';
+      return safeText(error && error.message, '網路連線異常') || '網路連線異常';
+    }
+
+    async function fetchFirebaseJson(url, request) {
+      let timeout;
+      const work = (async () => {
+        const token = await getOwnerIdToken();
+        if (!requestIsCurrent(request) || request.controller.signal.aborted) throw new DOMException('請求已取消', 'AbortError');
+        const endpoint = new URL(url);
+        endpoint.searchParams.set('auth', token);
+        const response = await fetch(endpoint.toString(), {
+          signal: request.controller.signal, cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer'
+        });
+        if (!response.ok) {
+          const error = new Error(`雲端讀取失敗 (HTTP ${response.status})`);
+          error.status = response.status;
+          throw error;
+        }
+        try { return await response.json(); }
+        catch { throw new Error('雲端回應不是有效 JSON'); }
+      })();
+      const deadline = new Promise((_, reject) => {
+        timeout = setTimeout(() => {
+          request.controller.abort();
+          reject(new Error('雲端讀取逾時，稍後自動重試'));
+        }, CONFIG.requestTimeoutMs);
+      });
+      try { return await Promise.race([work, deadline]); }
+      finally { clearTimeout(timeout); }
+    }
+
+    function scheduleNext(kind, generation) {
+      if (generation !== modeGeneration) return;
+      if (kind === 'realtime') {
+        clearTimeout(realtimeTimer);
+        realtimeTimer = setTimeout(() => { void syncData(); }, CONFIG.realtimeIntervalMs);
+      } else {
+        clearTimeout(historyTimer);
+        historyTimer = setTimeout(() => { void loadHistory(); }, CONFIG.historyIntervalMs);
+      }
+    }
+
+    async function syncData() {
+      if (realtimeRequest && realtimeRequest.generation === modeGeneration) return realtimeRequest.promise;
+      const generation = modeGeneration;
+      clearTimeout(realtimeTimer);
+      if (!isOwnerAuthenticated) {
+        const scenario = DEMO_SCENARIOS[demoScenarioIndex];
+        const jitter = scenario.basePower > 0 ? Math.random() * 0.06 - 0.03 : 0;
+        const power = Math.max(0, scenario.basePower + jitter);
+        applyDashboardData({ ...scenario, power, current: scenario.baseCurrent > 0 ? power * 1000 / 227.2 : 0,
+          is_off_peak: scenario.rate <= CONFIG.offPeakRateMax }, true);
+        scheduleNext('realtime', generation);
+        return;
+      }
+      const request = { generation, uid: activeOwnerUid, controller: new AbortController(), promise: null };
+      realtimeRequest = request;
+      request.promise = (async () => {
+        try {
+          const raw = await fetchFirebaseJson(FIREBASE_URL, request);
+          if (!requestIsCurrent(request)) return;
+          const data = normalizeDashboardPayload(raw);
+          applyDashboardData(data, false);
+          dashboardHasData = true;
+          lastUpdatedAt = data.updated_at;
+        } catch (error) {
+          if (!requestIsCurrent(request)) return;
+          if (!dashboardHasData) applyDashboardData({}, false);
+          updateTeslaChargingStage(false, '');
+          document.getElementById('flowLine1').className = 'flow-line';
+          document.getElementById('flowLine2').className = 'flow-line';
+          setText('flowEvseSub', dashboardHasData ? '⚠️ 目前顯示上次資料' : '⚠️ 尚無可用資料');
+          setText('statusBadge', '⚠️ 資料未更新');
+          document.getElementById('statusBadge').className = 'status-badge fault';
+          updateSyncHealth(lastUpdatedAt, true, false, `⚠️ ${describeReadError(error)}${dashboardHasData ? '（顯示上次成功資料）' : ''}`);
+        } finally {
+          if (realtimeRequest === request) realtimeRequest = null;
+          scheduleNext('realtime', generation);
+        }
+      })();
+      return request.promise;
+    }
+
+    async function loadHistory() {
+      if (historyRequest && historyRequest.generation === modeGeneration) return historyRequest.promise;
+      const generation = modeGeneration;
+      clearTimeout(historyTimer);
+      if (!isOwnerAuthenticated) {
+        allHistoryRecords = normalizeHistoryPayload(DEMO_HISTORY);
+        historyState = { kind: 'ready', message: '' };
+        populateMonthDropdown();
+        renderHistory();
+        scheduleNext('history', generation);
+        return;
+      }
+      const request = { generation, uid: activeOwnerUid, controller: new AbortController(), promise: null };
+      historyRequest = request;
+      if (!allHistoryRecords.length) { historyState = { kind: 'loading', message: '載入歷史紀錄中…' }; renderHistory(); }
+      request.promise = (async () => {
+        try {
+          const raw = await fetchFirebaseJson(HISTORY_URL, request);
+          if (!requestIsCurrent(request)) return;
+          const records = normalizeHistoryPayload(raw);
+          allHistoryRecords = records;
+          historyState = { kind: 'ready', message: '' };
+          populateMonthDropdown();
+          renderHistory();
+        } catch (error) {
+          if (!requestIsCurrent(request)) return;
+          historyState = { kind: 'error', message: `歷史讀取失敗：${describeReadError(error)}` };
+          renderHistory();
+        } finally {
+          if (historyRequest === request) historyRequest = null;
+          scheduleNext('history', generation);
+        }
+      })();
+      return request.promise;
+    }
+
+    function setOwnerSession(user) {
+      modeGeneration += 1;
+      if (realtimeRequest) realtimeRequest.controller.abort();
+      if (historyRequest) historyRequest.controller.abort();
+      realtimeRequest = null;
+      historyRequest = null;
+      clearTimeout(realtimeTimer);
+      clearTimeout(historyTimer);
+      isOwnerAuthenticated = !!user && CONFIG.ownerUids.includes(user.uid);
+      activeOwnerUid = isOwnerAuthenticated ? user.uid : '';
+      dashboardHasData = false;
+      lastUpdatedAt = null;
+      allHistoryRecords = [];
+      isHistoryExpanded = false;
+      document.getElementById('monthFilter').value = 'all';
+      document.getElementById('carFilter').value = 'all';
+      historyState = { kind: 'loading', message: '載入歷史紀錄中…' };
+      applyDashboardData({}, false);
+      populateMonthDropdown();
+      renderHistory();
+      updateModeUI();
+      if (isOwnerAuthenticated) {
+        setText('statusBadge', '資料載入中…');
+        updateSyncHealth(null, false, false, '正在讀取屋主資料…');
+      }
+      void syncData();
+      void loadHistory();
+    }
+
+    function cycleDemoScenario() {
+      if (isOwnerAuthenticated) return;
+      demoScenarioIndex = (demoScenarioIndex + 1) % DEMO_SCENARIOS.length;
+      setText('demoScenarioText', `目前模擬：${DEMO_SCENARIOS[demoScenarioIndex].label}`);
+      void syncData();
+    }
 
     // 支援 GitHub 各種常見大小寫與副檔名組合，避免因大小寫差異而找不到圖檔
     const CAR_FILE_CANDIDATES = {
@@ -910,169 +1411,6 @@
       { order_id: "DEMO-20261001", vehicle: "Luxgen n7", start_end: "2026/10/01 00:00:05 ~ 2026/10/01 05:49:55", duration: "5 小時 49 分 50 秒", energy: 20.50, cost: 40.8 }
     ];
 
-    // 初始化權限檢查（支援網址 ?key=9133 自動解鎖並抹除網址參數）
-    function initAuth() {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('key') === OWNER_PIN) {
-        localStorage.setItem(STORAGE_KEY, OWNER_PIN);
-        localStorage.removeItem(ATTEMPTS_KEY);
-        localStorage.removeItem(LOCK_UNTIL_KEY);
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-      isOwnerAuthenticated = (localStorage.getItem(STORAGE_KEY) === OWNER_PIN);
-      updateModeUI();
-    }
-
-    function updateModeUI() {
-      const banner = document.getElementById('demoBanner');
-      const switchBtn = document.getElementById('modeSwitchBtn');
-      if (isOwnerAuthenticated) {
-        banner.classList.remove('active');
-        switchBtn.innerText = '🎮 切換展示';
-      } else {
-        banner.classList.add('active');
-        switchBtn.innerText = '🔐 屋主解鎖';
-      }
-    }
-
-    // 檢查並更新 PIN 碼鎖定倒數狀態（3次鎖30秒、6次鎖3分鐘、9次以上鎖15分鐘）
-    function checkPinLockState() {
-      const input = document.getElementById('pinInput');
-      const confirmBtn = document.getElementById('pinConfirmBtn');
-      const err = document.getElementById('pinError');
-      const lockUntil = parseInt(localStorage.getItem(LOCK_UNTIL_KEY) || '0', 10);
-      const now = Date.now();
-
-      if (lockUntil > now) {
-        const remSec = Math.ceil((lockUntil - now) / 1000);
-        input.disabled = true;
-        confirmBtn.disabled = true;
-        const mins = Math.floor(remSec / 60);
-        const secs = remSec % 60;
-        const timeStr = mins > 0 ? `${mins} 分 ${secs} 秒` : `${secs} 秒`;
-        err.innerText = `🔒 錯誤次數過多，請於 ${timeStr} 後再試`;
-        return true;
-      } else {
-        if (input.disabled) {
-          input.disabled = false;
-          confirmBtn.disabled = false;
-          err.innerText = '';
-          input.focus();
-        }
-        if (lockCountdownTimer) {
-          clearInterval(lockCountdownTimer);
-          lockCountdownTimer = null;
-        }
-        return false;
-      }
-    }
-
-    function startLockCountdown() {
-      if (lockCountdownTimer) clearInterval(lockCountdownTimer);
-      checkPinLockState();
-      lockCountdownTimer = setInterval(checkPinLockState, 1000);
-    }
-
-    function openPinModal() {
-      const overlay = document.getElementById('pinModalOverlay');
-      const input = document.getElementById('pinInput');
-      const err = document.getElementById('pinError');
-      err.innerText = '';
-      input.value = '';
-      overlay.classList.add('show');
-      if (!checkPinLockState()) {
-        setTimeout(() => input.focus(), 100);
-      } else {
-        startLockCountdown();
-      }
-    }
-
-    function closePinModal() {
-      if (lockCountdownTimer) {
-        clearInterval(lockCountdownTimer);
-        lockCountdownTimer = null;
-      }
-      document.getElementById('pinModalOverlay').classList.remove('show');
-    }
-
-    function onPinInput(val) {
-      if (checkPinLockState()) return;
-      document.getElementById('pinError').innerText = '';
-      if (val.length === 4) {
-        verifyPin();
-      }
-    }
-
-    function verifyPin() {
-      if (checkPinLockState()) return;
-
-      const input = document.getElementById('pinInput');
-      const err = document.getElementById('pinError');
-      const val = input.value.trim();
-
-      if (val === OWNER_PIN) {
-        localStorage.setItem(STORAGE_KEY, OWNER_PIN);
-        localStorage.removeItem(ATTEMPTS_KEY);
-        localStorage.removeItem(LOCK_UNTIL_KEY);
-        isOwnerAuthenticated = true;
-        closePinModal();
-        updateModeUI();
-        syncData();
-        loadHistory();
-      } else {
-        const attempts = parseInt(localStorage.getItem(ATTEMPTS_KEY) || '0', 10) + 1;
-        localStorage.setItem(ATTEMPTS_KEY, String(attempts));
-        input.value = '';
-
-        // 每滿 3 次觸發階梯式鎖定：3次 -> 30秒、6次 -> 180秒(3分鐘)、9次以上 -> 900秒(15分鐘)
-        if (attempts % 3 === 0) {
-          let lockSec = 30;
-          if (attempts === 6) lockSec = 180;
-          else if (attempts >= 9) lockSec = 900;
-
-          localStorage.setItem(LOCK_UNTIL_KEY, String(Date.now() + lockSec * 1000));
-          startLockCountdown();
-        } else {
-          const remTries = 3 - (attempts % 3);
-          err.innerText = `❌ 通行碼錯誤 (還可嘗試 ${remTries} 次)`;
-        }
-      }
-    }
-
-    function onFooterModeSwitch() {
-      if (isOwnerAuthenticated) {
-        localStorage.removeItem(STORAGE_KEY);
-        isOwnerAuthenticated = false;
-        updateModeUI();
-        syncData();
-        loadHistory();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else {
-        openPinModal();
-      }
-    }
-
-    function cycleDemoScenario() {
-      demoScenarioIndex = (demoScenarioIndex + 1) % DEMO_SCENARIOS.length;
-      const sc = DEMO_SCENARIOS[demoScenarioIndex];
-      document.getElementById('demoScenarioText').innerText = `目前模擬：${sc.label}`;
-      syncData();
-    }
-
-    // 判斷紀錄屬於哪一台車 ('n7' | 'bria')
-    function getVehicleType(vehicleName) {
-      const v = (vehicleName || '').toLowerCase();
-      if (v.includes('n7') || v.includes('luxgen')) return 'n7';
-      return 'bria';
-    }
-
-    // 依車款名稱回傳對應的配色標籤 Class
-    function getVehicleBadgeClass(vehicleName) {
-      const v = (vehicleName || '').toLowerCase();
-      if (v.includes('n7') || v.includes('luxgen')) return 'car-badge car-n7';
-      if (v.includes('bria') || v.includes('foxtron')) return 'car-badge car-bria';
-      return 'car-badge car-default';
-    }
 
     // ==================== 【雙車款獨立倒影與陰影參數調整區（100% 原數值保留）】 ====================
     const REFL_CONFIG = {
@@ -1512,436 +1850,221 @@
       gunGroup.setAttribute('transform', `translate(${portX}, ${portY})`);
     }
 
-    // 檢查雲端同步時間是否超過 10 分鐘未更新
-    function updateSyncHealth(updatedAtStr, isError = false, isDemo = false) {
-      const footerEl = document.getElementById('footerBar');
-      const pulseEl = document.getElementById('syncPulse');
-      const textEl = document.getElementById('syncStatusText');
-      const timeEl = document.getElementById('updateTime');
 
-      if (isDemo) {
-        footerEl.className = 'footer';
-        pulseEl.className = 'pulse demo';
-        textEl.innerText = '訪客展示模式運行中';
-        const now = new Date();
-        const pad = n => String(n).padStart(2, '0');
-        timeEl.innerText = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-        return;
+    // 歷史資料只接受帳單集合；錯誤回應不可被轉成假帳單。
+    function normalizeHistoryPayload(data) {
+      if (data === null) return [];
+      if (!data || typeof data !== 'object' || Object.prototype.hasOwnProperty.call(data, 'error')) {
+        throw new Error('歷史資料格式不符，請檢查資料庫權限與 HA 輸出');
       }
-
-      if (isError) {
-        footerEl.className = 'footer stale';
-        pulseEl.className = 'pulse stale';
-        textEl.innerText = '⚠️ 網路連線異常';
-        return;
-      }
-
-      timeEl.innerText = updatedAtStr || '-';
-      if (!updatedAtStr) return;
-
-      const parsedTime = new Date(updatedAtStr.replace(/-/g, '/'));
-      if (isNaN(parsedTime.getTime())) return;
-
-      const diffMins = Math.floor((Date.now() - parsedTime.getTime()) / 60000);
-      if (diffMins >= 10) {
-        footerEl.className = 'footer stale';
-        pulseEl.className = 'pulse stale';
-        textEl.innerText = `訊號未更新 (已逾 ${diffMins} 分鐘)`;
-      } else {
-        footerEl.className = 'footer';
-        pulseEl.className = 'pulse';
-        textEl.innerText = '雲端即時同步中';
-      }
-    }
-
-    // 計算指針旋轉角度（-90deg 代表 0，+90deg 代表滿刻度）
-    function updateGauge(needleId, valTextId, value, maxVal, unit) {
-      const needle = document.getElementById(needleId);
-      const textEl = document.getElementById(valTextId);
-      const val = parseFloat(value) || 0;
-      
-      const ratio = Math.min(Math.max(val / maxVal, 0), 1);
-      const angle = -90 + (ratio * 180);
-      
-      if (needle) {
-        needle.style.transform = `rotate(${angle}deg)`;
-      }
-      if (textEl) {
-        textEl.innerHTML = `${val.toFixed(2)} <tspan font-size="12" font-weight="500" fill="#9ca3af" stroke="none">${unit}</tspan>`;
-      }
-    }
-
-    // 更新動態電力流向圖 (EMS Energy Flow)
-    function updateEnergyFlow(rate, status, power, vehicleName) {
-      const numRate = parseFloat(rate || 0);
-      const isOffPeak = (numRate > 0 && numRate <= 2.2);
-      const isCharging = (status === 'Charging' || power > 0.1);
-      const isPluggedWaiting = (!isCharging && status && status !== 'Available' && status !== 'unavailable' && status !== 'unknown');
-
-      // 1. 左節點：台電電網
-      const gridNode = document.getElementById('flowGridNode');
-      const gridTitle = document.getElementById('flowGridTitle');
-      const gridSub = document.getElementById('flowGridSub');
-      if (isOffPeak) {
-        gridNode.className = 'flow-node active-green';
-        gridTitle.innerText = '🟢 台電離峰電網';
-      } else {
-        gridNode.className = 'flow-node active-amber';
-        gridTitle.innerText = '🟠 台電尖峰電網';
-      }
-      gridSub.innerText = `${numRate || '--'} 元/度`;
-
-      // 2. 中節點：16A 充電樁
-      const evseNode = document.getElementById('flowEvseNode');
-      const evseSub = document.getElementById('flowEvseSub');
-      if (isCharging) {
-        evseNode.className = 'flow-node active-green';
-        evseSub.innerText = `⚡ 送電 ${power.toFixed(2)} kW`;
-      } else if (isPluggedWaiting) {
-        evseNode.className = 'flow-node active-blue';
-        evseSub.innerText = '⏳ 插槍等待排程';
-      } else {
-        evseNode.className = 'flow-node';
-        evseSub.innerText = '🔒 斷電上鎖待命';
-      }
-
-      // 3. 右節點：上方固定為「🚗 車輛」，下方依狀態顯示「未插槍待命」或「車型」
-      const carNode = document.getElementById('flowCarNode');
-      const carTitle = document.getElementById('flowCarTitle');
-      const carSub = document.getElementById('flowCarSub');
-      const isN7 = getVehicleType(vehicleName) === 'n7';
-      const displayCar = (vehicleName && vehicleName !== '-') ? vehicleName : '電動車';
-      carTitle.innerText = '🚗 車輛';
-
-      if (isCharging) {
-        carNode.className = isN7 ? 'flow-node active-blue' : 'flow-node active-green';
-        carSub.innerText = isN7 ? `🔵 ${displayCar}` : `🟢 ${displayCar}`;
-        carSub.style.color = isN7 ? '#38bdf8' : '#4ade80';
-      } else if (isPluggedWaiting) {
-        carNode.className = isN7 ? 'flow-node active-blue' : 'flow-node active-green';
-        carSub.innerText = `🔌 ${displayCar}`;
-        carSub.style.color = isN7 ? '#38bdf8' : '#4ade80';
-      } else {
-        carNode.className = 'flow-node';
-        carSub.innerText = '🅿️ 未插槍待命';
-        carSub.style.color = 'var(--text-sub)';
-      }
-
-      // 4. 連接線動態光點
-      const line1 = document.getElementById('flowLine1');
-      const line2 = document.getElementById('flowLine2');
-      if (isCharging) {
-        line1.className = 'flow-line charging';
-        line2.className = 'flow-line charging';
-      } else if (isPluggedWaiting) {
-        line1.className = 'flow-line';
-        line2.className = 'flow-line standby';
-      } else {
-        line1.className = 'flow-line';
-        line2.className = 'flow-line';
-      }
-    }
-
-    // 更新電價時段燈號與離峰倒數計時
-    function updateTouStatus(rate, scheduleStr) {
-      const badgeEl = document.getElementById('touBadge');
-      const countdownEl = document.getElementById('touCountdown');
-      const now = new Date();
-      const day = now.getDay();
-      const curMins = now.getHours() * 60 + now.getMinutes();
-      const isWeekend = (day === 0 || day === 6 || (scheduleStr && scheduleStr.includes('全日')));
-      const numRate = parseFloat(rate || 0);
-
-      if (numRate > 0 && numRate <= 2.2) {
-        badgeEl.className = 'tou-pill off-peak';
-        badgeEl.innerText = `🟢 離峰優惠中 (${numRate} 元/度)`;
-        if (isWeekend) {
-          countdownEl.innerHTML = '🎉 今日為假日全日離峰，隨時插槍皆享最低費率！';
-        } else if (now.getHours() < 6) {
-          const rem = 360 - curMins;
-          countdownEl.innerHTML = `⏳ 距離 06:00 離峰結束還有 <b>${Math.floor(rem / 60)} 小時 ${rem % 60} 分</b>`;
-        } else if (now.getHours() >= 11 && now.getHours() < 14) {
-          const rem = 840 - curMins;
-          countdownEl.innerHTML = `⏳ 距離 14:00 離峰結束還有 <b>${Math.floor(rem / 60)} 小時 ${rem % 60} 分</b>`;
-        } else {
-          countdownEl.innerHTML = '⚡ 目前享有離峰優惠費率';
+      const rows = Array.isArray(data) ? data.map((value, index) => [String(index), value]) : Object.entries(data);
+      const records = rows.map(([key, row]) => {
+        if (!row || typeof row !== 'object' || Array.isArray(row) || Object.prototype.hasOwnProperty.call(row, 'error')) {
+          throw new Error('歷史資料含無效的帳單列');
         }
-      } else {
-        badgeEl.className = 'tou-pill peak';
-        badgeEl.innerText = `🟠 尖峰時段 (${numRate} 元/度)`;
-        if (curMins >= 360 && curMins < 660) {
-          const rem = 660 - curMins;
-          countdownEl.innerHTML = `⏳ 距離 11:00 離峰優惠還有 <b>${Math.floor(rem / 60)} 小時 ${rem % 60} 分</b>`;
-        } else {
-          const rem = 1440 - curMins;
-          countdownEl.innerHTML = `⏳ 距離 00:00 離峰優惠還有 <b>${Math.floor(rem / 60)} 小時 ${rem % 60} 分</b>`;
+        const textFields = ['order_id', 'vehicle', 'start_end', 'started_at', 'created_at', 'duration'];
+        for (const field of textFields) {
+          const value = row[field];
+          if (value !== undefined && value !== null && typeof value !== 'string' && typeof value !== 'number') {
+            throw new Error('歷史帳單欄位格式不符');
+          }
         }
-      }
+        for (const field of ['energy', 'cost']) {
+          const value = row[field];
+          if (value !== undefined && value !== null && typeof value !== 'number' && typeof value !== 'string') {
+            throw new Error('歷史帳單數值欄位格式不符');
+          }
+        }
+        const energyValue = finiteNumber(row.energy);
+        const costValue = finiteNumber(row.cost);
+        const energy = energyValue !== null && energyValue >= 0 ? energyValue : null;
+        const cost = costValue !== null && costValue >= 0 ? costValue : null;
+        const hasIdentity = ['order_id', 'vehicle', 'start_end', 'started_at', 'created_at']
+          .some(field => safeText(row[field]).trim() !== '');
+        if (!hasIdentity && energy === null && cost === null) {
+          throw new Error('歷史資料含無法辨識的帳單列');
+        }
+        return {
+          order_id: safeText(row.order_id, key),
+          vehicle: safeText(row.vehicle),
+          start_end: safeText(row.start_end),
+          started_at: row.started_at === undefined || row.started_at === null ? '' : row.started_at,
+          created_at: row.created_at === undefined || row.created_at === null ? '' : row.created_at,
+          duration: safeText(row.duration),
+          energy,
+          cost
+        };
+      });
+      return records.sort((a, b) => {
+        const aTime = historyRecordTimestamp(a);
+        const bTime = historyRecordTimestamp(b);
+        if (aTime === null && bTime === null) return 0;
+        if (aTime === null) return 1;
+        if (bTime === null) return -1;
+        return bTime - aTime;
+      });
     }
 
-    // 將資料渲染至面板（真實模式與展示模式共用）
-    function applyDashboardData(data, isDemo = false) {
-      const power = parseFloat(data.power || 0);
-      const current = parseFloat(data.current || 0);
-      const isCharging = (data.status === 'Charging' || power > 0.1);
-
-      const badge = document.getElementById('statusBadge');
-      badge.innerText = isCharging ? '⚡ 充電中' : (data.status === 'Available' ? '待命中' : data.status);
-      badge.className = isCharging ? 'status-badge charging' : 'status-badge';
-      const schedStr = data.schedule || '全日離峰';
-      document.getElementById('scheduleText').innerText = schedStr;
-
-      updateTouStatus(data.rate, schedStr);
-      updateEnergyFlow(data.rate, data.status, power, data.vehicle);
-      updateTeslaChargingStage(isCharging, data.vehicle);
-
-      updateGauge('needlePower', 'powerVal', power, 4.5, 'kW');
-      updateGauge('needleCurrent', 'currentVal', current, 20, 'A');
-
-      const voltageSubEl = document.getElementById('voltageSub');
-      const loadSubEl = document.getElementById('loadSub');
-      if (isCharging && current > 0.5) {
-        const calcVolt = (power * 1000) / current;
-        const loadPct = Math.round((current / 16.0) * 100);
-        voltageSubEl.innerHTML = `⚡ 即時電壓：<b>${calcVolt.toFixed(1)} V</b>`;
-        loadSubEl.innerHTML = `🛡️ 16A 額定負載：<b style="color: ${loadPct > 100 ? '#f59e0b' : '#4ade80'};">${loadPct}%</b>`;
-      } else {
-        voltageSubEl.innerHTML = `⚡ 線路狀態：<b>待命 (0V)</b>`;
-        loadSubEl.innerHTML = `🛡️ 送審規格：<b>16A (斷路器20A)</b>`;
+    function historyRecordTimestamp(item) {
+      const startPart = safeText(item.start_end).split(/\s*[~～]\s*/)[0].trim();
+      for (const value of [item.started_at, startPart, item.created_at]) {
+        if (value === '' || value === undefined || value === null) continue;
+        const timestamp = parseTimestamp(value);
+        if (timestamp !== null) return timestamp;
       }
-
-      const vName = data.vehicle || '-';
-      const vEl = document.getElementById('vehicleName');
-      if (vName !== '-') {
-        vEl.innerHTML = `<span class="${getVehicleBadgeClass(vName)}">${vName}</span>`;
-      } else {
-        vEl.innerText = '-';
-      }
-
-      const rawTime = data.session_time || '';
-      const timeEl = document.getElementById('sessionTime');
-      if (rawTime.includes(' ~ ')) {
-        const parts = rawTime.split(' ~ ');
-        const start = parts[0].trim().replace(/-/g, '/');
-        const end = parts[1].trim().replace(/-/g, '/');
-        const isEndCharging = end.includes('充電中');
-        timeEl.innerHTML = `
-          <div>${start}</div>
-          <div style="color: ${isEndCharging ? 'var(--accent)' : 'inherit'};">~ ${end}</div>
-        `;
-      } else {
-        timeEl.innerText = rawTime || '待機中';
-      }
-
-      const sessionEnergy = parseFloat(data.session_energy || 0);
-      const sessionCost = parseFloat(data.session_cost || 0);
-      const monthEnergyRaw = parseFloat(data.month_energy || 0);
-      const monthEnergy = monthEnergyRaw > 0 ? monthEnergyRaw : sessionEnergy;
-      const monthCost = parseFloat(data.month_cost || 0);
-
-      const sessionKm = Math.round(sessionEnergy * 6.0);
-      const monthKm = Math.round(monthEnergy * 6.0);
-      const avgRate = monthEnergy > 0 ? (monthCost / monthEnergy) : 0;
-      const equivLiters = monthCost / 30.0;
-      const equivKmL = (equivLiters > 0 && monthKm > 0) ? (monthKm / equivLiters) : 0;
-
-      const dcCost = Math.round(monthEnergy * 6.5);
-      const savedDcMoney = Math.max(0, Math.round(dcCost - monthCost));
-      const gasCost = Math.round((monthKm / 12.5) * 30);
-      const savedMoney = Math.max(0, Math.round(gasCost - monthCost));
-
-      document.getElementById('sessionDuration').innerText = data.session_duration || '待機中';
-      document.getElementById('sessionEnergy').innerText = `${sessionEnergy.toFixed(2)} kWh`;
-      document.getElementById('sessionKm').innerText = `約 +${sessionKm} km`;
-      document.getElementById('rateVal').innerText = `${data.rate || 0} 元/度`;
-      document.getElementById('sessionCost').innerText = `${sessionCost.toFixed(1)} 元`;
-
-      document.getElementById('monthEnergy').innerText = `${monthEnergy.toFixed(1)} kWh`;
-      document.getElementById('monthCost').innerText = `${monthCost.toFixed(1)} 元`;
-      document.getElementById('avgRateVal').innerText = `${avgRate.toFixed(2)} 元/度`;
-      document.getElementById('monthKm').innerText = `約 +${monthKm} km`;
-      document.getElementById('equivKmL').innerText = equivKmL > 0 ? `🔥 相當於 ${equivKmL.toFixed(1)} km/L` : '-';
-      document.getElementById('dcCost').innerText = `約 NT$ ${dcCost} 元`;
-      document.getElementById('gasCost').innerText = `約 NT$ ${gasCost} 元`;
-      document.getElementById('savedDcMoney').innerText = `⚡ 淨省 NT$ ${savedDcMoney} 元`;
-      document.getElementById('savedMoney').innerText = `💰 淨省 NT$ ${savedMoney} 元`;
-
-      updateSyncHealth(data.updated_at, false, isDemo);
+      return null;
     }
 
-    async function syncData() {
-      // 未解鎖訪客：執行擬真動態展示數據（不連線真實 Firebase）
-      if (!isOwnerAuthenticated) {
-        const sc = DEMO_SCENARIOS[demoScenarioIndex];
-        const jitter = sc.basePower > 0 ? (Math.random() * 0.06 - 0.03) : 0;
-        const simPower = Math.max(0, sc.basePower + jitter);
-        const simCurrent = sc.baseCurrent > 0 ? (simPower * 1000) / 227.2 : 0;
-        applyDashboardData({
-          ...sc,
-          power: simPower,
-          current: simCurrent
-        }, true);
-        return;
-      }
-
-      // 已驗證屋主：讀取真實 Firebase 數據
-      try {
-        const res = await fetch(FIREBASE_URL);
-        const data = await res.json();
-        if (!data) return;
-        applyDashboardData(data, false);
-      } catch (err) {
-        console.error("同步失敗:", err);
-        updateSyncHealth(null, true, false);
-      }
-    }
-
-    // 擷取紀錄所屬月份 (格式: YYYY/MM)
     function extractMonth(item) {
-      const raw = (item.start_end || item.created_at || '').replace(/-/g, '/');
-      const match = raw.match(/(\d{4}\/\d{2})/);
-      return match ? match[1] : '其他';
+      const timestamp = historyRecordTimestamp(item);
+      if (timestamp === null) return '其他';
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit'
+      }).formatToParts(new Date(timestamp));
+      const year = parts.find(part => part.type === 'year').value;
+      const month = parts.find(part => part.type === 'month').value;
+      return `${year}/${month}`;
     }
 
-    // 取得目前篩選後的紀錄陣列
     function getFilteredHistory() {
       const monthFilterEl = document.getElementById('monthFilter');
       const carFilterEl = document.getElementById('carFilter');
       const selectedMonth = monthFilterEl ? monthFilterEl.value : 'all';
       const selectedCar = carFilterEl ? carFilterEl.value : 'all';
-
       const monthFiltered = selectedMonth === 'all'
         ? allHistoryRecords
         : allHistoryRecords.filter(item => extractMonth(item) === selectedMonth);
-
       const filtered = selectedCar === 'all'
         ? monthFiltered
         : monthFiltered.filter(item => getVehicleType(item.vehicle) === selectedCar);
-
       return { selectedMonth, selectedCar, monthFiltered, filtered };
     }
 
-    // 匯出 CSV 報表
-    function exportCSV() {
-      const { selectedMonth, filtered } = getFilteredHistory();
-      if (!filtered.length) {
-        alert('目前篩選條件下沒有可匯出的充電紀錄！');
-        return;
-      }
-
-      const headers = ['工單編號', '充電車輛', '充電時段', '充電時長', '充入電量(kWh)', '充電費用(NT$)'];
-      const rows = filtered.map(item => [
-        `"${item.order_id || ''}"`,
-        `"${item.vehicle || '電動車'}"`,
-        `"${(item.start_end || item.created_at || '').replace(/-/g, '/')}"`,
-        `"${item.duration || ''}"`,
-        item.energy !== undefined ? Number(item.energy).toFixed(2) : '0.00',
-        item.cost !== undefined ? Number(item.cost).toFixed(1) : '0.0'
-      ]);
-
-      const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      const suffix = selectedMonth === 'all' ? '全部月份' : selectedMonth.replace('/', '-');
-      a.href = url;
-      a.download = `車位充電帳單_${suffix}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+    function historyTextElement(tag, text, cssText = '') {
+      const element = document.createElement(tag);
+      element.textContent = safeText(text);
+      if (cssText) element.style.cssText = cssText;
+      return element;
     }
 
-    // 渲染雙車款分帳統計與無邊框歷史帳單清單
+    function historyAmountSummary(records, field, digits, suffix = '') {
+      const values = records.map(record => finiteNumber(record[field]));
+      const valid = values.filter(value => value !== null && value >= 0);
+      if (records.length && !valid.length) return `--${suffix}（資料不完整）`;
+      const total = valid.reduce((sum, value) => sum + value, 0);
+      return `${total.toFixed(digits)}${suffix}${valid.length < records.length ? '（部分）' : ''}`;
+    }
+
     function renderHistory() {
       const listEl = document.getElementById('history-list');
-      const countEl = document.getElementById('history-count');
       const toggleBtn = document.getElementById('toggleHistoryBtn');
-
       const { selectedMonth, monthFiltered, filtered } = getFilteredHistory();
+      const briaRecords = monthFiltered.filter(item => getVehicleType(item.vehicle) === 'bria');
+      const n7Records = monthFiltered.filter(item => getVehicleType(item.vehicle) === 'n7');
+      const unknownRecords = monthFiltered.filter(item => getVehicleType(item.vehicle) === 'unknown');
+      const sumKnownEnergy = records => records.reduce((sum, item) => {
+        const value = finiteNumber(item.energy);
+        return sum + (value !== null && value >= 0 ? value : 0);
+      }, 0);
+      const briaEnergy = sumKnownEnergy(briaRecords);
+      const n7Energy = sumKnownEnergy(n7Records);
+      const knownEnergy = briaEnergy + n7Energy;
+      const briaPct = knownEnergy > 0 ? Math.round(briaEnergy / knownEnergy * 100) : null;
+      const n7Pct = briaPct === null ? null : 100 - briaPct;
+      const hasMissingAmounts = monthFiltered.some(item => finiteNumber(item.energy) === null || finiteNumber(item.cost) === null);
+      const notes = [];
+      if (unknownRecords.length) notes.push('未分類另列');
+      if (hasMissingAmounts) notes.push('部分資料不完整');
+      if (unknownRecords.length || hasMissingAmounts) notes.push('比例僅計雙車已知電量');
+      const period = selectedMonth === 'all' ? '全部月份' : selectedMonth;
+      setText('splitPeriodLabel', `📊 雙車款用電與費用分帳 (${period})${notes.length ? ' · ' + notes.join('；') : ''}`);
+      setText('splitTotalCount', `共 ${monthFiltered.length} 次充電`);
+      const briaBar = document.getElementById('barBria');
+      const n7Bar = document.getElementById('barN7');
+      if (briaBar) briaBar.style.width = briaPct === null ? '0%' : `${briaPct}%`;
+      if (n7Bar) n7Bar.style.width = n7Pct === null ? '0%' : `${n7Pct}%`;
+      setText('briaPct', `${briaPct === null ? '--' : briaPct + '%'} (${briaRecords.length}次)`);
+      setText('n7Pct', `${n7Pct === null ? '--' : n7Pct + '%'} (${n7Records.length}次)`);
+      setText('briaEnergy', historyAmountSummary(briaRecords, 'energy', 1, ' kWh'));
+      setText('briaCost', `NT$ ${historyAmountSummary(briaRecords, 'cost', 1)}`);
+      setText('n7Energy', historyAmountSummary(n7Records, 'energy', 1, ' kWh'));
+      setText('n7Cost', `NT$ ${historyAmountSummary(n7Records, 'cost', 1)}`);
+      const unknownSummary = document.getElementById('unknownSummary');
+      if (unknownSummary) unknownSummary.style.display = unknownRecords.length ? 'block' : 'none';
+      setText('unknownCount', `共 ${unknownRecords.length} 次`);
+      setText('unknownEnergy', historyAmountSummary(unknownRecords, 'energy', 1, ' kWh'));
+      setText('unknownCost', `NT$ ${historyAmountSummary(unknownRecords, 'cost', 1)}`);
 
-      let briaEnergy = 0, briaCost = 0, briaCount = 0;
-      let n7Energy = 0, n7Cost = 0, n7Count = 0;
-
-      monthFiltered.forEach(item => {
-        const type = getVehicleType(item.vehicle);
-        const e = parseFloat(item.energy) || 0;
-        const c = parseFloat(item.cost) || 0;
-        if (type === 'n7') {
-          n7Energy += e;
-          n7Cost += c;
-          n7Count += 1;
-        } else {
-          briaEnergy += e;
-          briaCost += c;
-          briaCount += 1;
-        }
-      });
-
-      const totalEnergy = briaEnergy + n7Energy;
-      const briaPct = totalEnergy > 0 ? Math.round((briaEnergy / totalEnergy) * 100) : 0;
-      const n7Pct = totalEnergy > 0 ? (100 - briaPct) : 0;
-
-      document.getElementById('splitPeriodLabel').innerText = selectedMonth === 'all'
-        ? '📊 雙車款用電與費用分帳 (全部月份)'
-        : `📊 雙車款用電與費用分帳 (${selectedMonth})`;
-      document.getElementById('splitTotalCount').innerText = `共 ${monthFiltered.length} 次充電`;
-
-      document.getElementById('barBria').style.width = totalEnergy > 0 ? `${briaPct}%` : '50%';
-      document.getElementById('barN7').style.width = totalEnergy > 0 ? `${n7Pct}%` : '50%';
-      document.getElementById('briaPct').innerText = `${briaPct}% (${briaCount}次)`;
-      document.getElementById('n7Pct').innerText = `${n7Pct}% (${n7Count}次)`;
-      document.getElementById('briaEnergy').innerText = `${briaEnergy.toFixed(1)} kWh`;
-      document.getElementById('briaCost').innerText = `NT$ ${briaCost.toFixed(1)}`;
-      document.getElementById('n7Energy').innerText = `${n7Energy.toFixed(1)} kWh`;
-      document.getElementById('n7Cost').innerText = `NT$ ${n7Cost.toFixed(1)}`;
-
-      if (!allHistoryRecords.length) {
-        listEl.innerHTML = '<div style="text-align:center; color:var(--text-sub); font-size:13px; padding:12px 0;">尚無歷史充電紀錄</div>';
-        if (countEl) countEl.innerText = '0 筆';
-        if (toggleBtn) toggleBtn.style.display = 'none';
-        return;
-      }
-
-      if (countEl) countEl.innerText = `${filtered.length} 筆`;
-
+      const isReady = historyState.kind === 'ready';
+      const previous = allHistoryRecords.length > 0 && !isReady;
+      const statusMessage = historyState.kind === 'loading'
+        ? '讀取歷史紀錄中…'
+        : historyState.kind === 'error' ? (historyState.message || '歷史紀錄讀取失敗') : historyState.message;
+      setText('historyMessage', `${statusMessage || ''}${previous ? ' · 以下顯示上次成功資料' : ''}`);
+      const exportButton = document.getElementById('exportCsvBtn');
+      if (exportButton) exportButton.disabled = !isReady || !filtered.length;
+      setText('history-count', `${filtered.length} 筆${previous ? '（上次成功資料）' : ''}`);
+      if (!listEl) return;
+      listEl.replaceChildren();
       if (!filtered.length) {
-        listEl.innerHTML = '<div style="text-align:center; color:var(--text-sub); font-size:13px; padding:12px 0;">此篩選條件下尚無充電紀錄</div>';
+        const message = !isReady && !allHistoryRecords.length
+          ? (historyState.kind === 'loading' ? '讀取歷史紀錄中…' : '目前沒有可顯示的歷史資料')
+          : allHistoryRecords.length ? '此篩選條件下尚無充電紀錄' : '尚無歷史充電紀錄';
+        listEl.appendChild(historyTextElement('div', message, 'text-align:center;color:var(--text-sub);font-size:13px;padding:12px 0;'));
         if (toggleBtn) toggleBtn.style.display = 'none';
         return;
       }
 
       const visibleRecords = isHistoryExpanded ? filtered : filtered.slice(0, HISTORY_LIMIT);
-
-      listEl.innerHTML = visibleRecords.map(item => {
-        const carName = item.vehicle || '電動車';
-        return `
-        <div class="history-item-frameless">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-            <span style="font-family: monospace; font-size: 12px; color: var(--text-sub);">${item.order_id || '工單'}</span>
-            <span class="${getVehicleBadgeClass(carName)}">
-              ${carName}
-            </span>
-          </div>
-          <div style="font-size: 12px; color: var(--text-sub); margin-bottom: 7px;">
-            ${(item.start_end || item.created_at || '--').replace(/-/g, '/')}
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
-            <div><span style="color: var(--text-sub);">電量: </span><b>${item.energy !== undefined ? Number(item.energy).toFixed(2) + ' kWh' : '--'}</b></div>
-            <div><span style="color: var(--text-sub);">時長: </span><b>${item.duration || '--'}</b></div>
-            <div style="color: var(--warning); font-weight: 700; font-size: 14px;">NT$ ${item.cost !== undefined ? Number(item.cost).toFixed(1) : '--'}</div>
-          </div>
-        </div>
-      `}).join('');
-
-      if (filtered.length > HISTORY_LIMIT) {
-        toggleBtn.style.display = 'block';
-        toggleBtn.innerText = isHistoryExpanded
-          ? '▲ 收合歷史紀錄'
-          : `▼ 展開全部紀錄（還有 ${filtered.length - HISTORY_LIMIT} 筆）`;
-      } else {
-        toggleBtn.style.display = 'none';
+      for (const item of visibleRecords) {
+        const card = document.createElement('div');
+        card.className = 'history-item-frameless';
+        const heading = document.createElement('div');
+        heading.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:8px;';
+        heading.appendChild(historyTextElement('span', item.order_id || '工單', 'font-family:monospace;font-size:12px;color:var(--text-sub);overflow-wrap:anywhere;'));
+        const carName = safeText(item.vehicle).trim() || '未分類車輛';
+        const badge = historyTextElement('span', carName);
+        badge.className = getVehicleBadgeClass(carName);
+        heading.appendChild(badge);
+        card.appendChild(heading);
+        const time = safeText(item.start_end) || safeText(item.started_at) || safeText(item.created_at) || '--';
+        card.appendChild(historyTextElement('div', time, 'font-size:12px;color:var(--text-sub);margin-bottom:7px;overflow-wrap:anywhere;'));
+        const detail = document.createElement('div');
+        detail.style.cssText = 'display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;font-size:13px;';
+        const energy = document.createElement('div');
+        energy.appendChild(historyTextElement('span', '電量: ', 'color:var(--text-sub);'));
+        energy.appendChild(historyTextElement('b', item.energy === null || item.energy === undefined ? '--' : `${formatNumber(item.energy, 2)} kWh`));
+        const duration = document.createElement('div');
+        duration.appendChild(historyTextElement('span', '時長: ', 'color:var(--text-sub);'));
+        duration.appendChild(historyTextElement('b', item.duration || '--'));
+        detail.append(energy, duration, historyTextElement('div', `NT$ ${formatNumber(item.cost, 1)}`, 'color:var(--warning);font-weight:700;font-size:14px;'));
+        card.appendChild(detail);
+        listEl.appendChild(card);
       }
+      if (toggleBtn) {
+        toggleBtn.style.display = filtered.length > HISTORY_LIMIT ? 'block' : 'none';
+        toggleBtn.textContent = isHistoryExpanded ? '▲ 收合歷史紀錄' : `▼ 展開全部紀錄（還有 ${Math.max(0, filtered.length - HISTORY_LIMIT)} 筆）`;
+      }
+    }
+
+    function populateMonthDropdown() {
+      const filterEl = document.getElementById('monthFilter');
+      if (!filterEl) return;
+      const currentSelected = filterEl.value;
+      const months = [...new Set(allHistoryRecords.map(extractMonth))].sort((a, b) => {
+        if (a === '其他') return 1;
+        if (b === '其他') return -1;
+        return b.localeCompare(a);
+      });
+      const allOption = historyTextElement('option', '全部月份');
+      allOption.value = 'all';
+      filterEl.replaceChildren(allOption);
+      for (const month of months) {
+        const option = historyTextElement('option', month);
+        option.value = month;
+        filterEl.appendChild(option);
+      }
+      filterEl.value = months.includes(currentSelected) ? currentSelected : 'all';
     }
 
     function onFilterChange() {
@@ -1954,50 +2077,389 @@
       renderHistory();
     }
 
-    function populateMonthDropdown() {
-      const filterEl = document.getElementById('monthFilter');
-      const currentSelected = filterEl.value;
-      const months = [...new Set(allHistoryRecords.map(extractMonth))];
-      filterEl.innerHTML = '<option value="all">全部月份</option>' +
-        months.map(m => `<option value="${m}">${m}</option>`).join('');
-      if (months.includes(currentSelected)) {
-        filterEl.value = currentSelected;
-      }
+    function historyCsvTextCell(value) {
+      let text = safeText(value);
+      // 引號只能保護 CSV 結構；試算表公式另加單引號使其保持文字。
+      if (/^[\s\uFEFF]*[=+\-@]/u.test(text) || /^[\t\r\n]/u.test(text)) text = "'" + text;
+      return '"' + text.replace(/"/g, '""') + '"';
     }
 
-    // 抓取歷史充電帳單（展示模式載入 20 筆整月範例帳單，屋主模式讀取真實 Firebase）
-    async function loadHistory() {
-      if (!isOwnerAuthenticated) {
-        allHistoryRecords = [...DEMO_HISTORY];
-        populateMonthDropdown();
-        renderHistory();
+    function exportCSV() {
+      if (historyState.kind !== 'ready') {
+        alert('歷史資料尚未成功更新，請稍後再匯出。');
         return;
       }
-
-      try {
-        const res = await fetch(HISTORY_URL);
-        const data = await res.json();
-        
-        if (!data) {
-          allHistoryRecords = [];
-          renderHistory();
-          return;
-        }
-
-        allHistoryRecords = Object.values(data).reverse();
-        populateMonthDropdown();
-        renderHistory();
-      } catch (err) {
-        console.error('讀取歷史紀錄失敗:', err);
+      const { selectedMonth, selectedCar, filtered } = getFilteredHistory();
+      if (!filtered.length) {
+        alert('目前篩選條件下沒有可匯出的充電紀錄！');
+        return;
+      }
+      const headers = ['工單編號', '充電車輛', '充電時段', '充電時長', '充入電量(kWh)', '充電費用(NT$)'];
+      const rows = filtered.map(item => [
+        historyCsvTextCell(item.order_id),
+        historyCsvTextCell(item.vehicle || '未分類車輛'),
+        historyCsvTextCell(item.start_end || item.started_at || item.created_at),
+        historyCsvTextCell(item.duration),
+        item.energy === null || item.energy === undefined ? '' : formatNumber(item.energy, 2),
+        item.cost === null || item.cost === undefined ? '' : formatNumber(item.cost, 1)
+      ].join(','));
+      const csvContent = '\uFEFF' + [headers.map(historyCsvTextCell).join(','), ...rows].join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const suffix = selectedMonth === 'all' ? '全部月份' : selectedMonth.replace('/', '-');
+      const carSuffix = { all: '', bria: '_Bria', n7: '_n7', unknown: '_未分類' }[selectedCar] || '';
+      link.href = url;
+      link.download = `車位充電帳單_${suffix}${carSuffix}.csv`;
+      document.body.appendChild(link);
+      try { link.click(); }
+      finally {
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
       }
     }
 
-    // 啟動驗證、輪詢與載入
-    initAuth();
-    syncData();
-    loadHistory();
-    setInterval(syncData, 3000);      // 每 3 秒同步即時狀態（展示模式下模擬微幅指針跳動）
-    setInterval(loadHistory, 30000);  // 每 30 秒檢查有無新歷史帳單
+// Firebase web config 與 UID 不是秘密；真正的資料權限由伺服器端 Rules 決定。
+let ownerUser = null;
+let firebaseAuth = null;
+let authApi = null;
+let firebaseAuthReady = null;
+let authIntentVersion = 0;
+let authSuppressed = false;
+let authSignInPending = false;
+let authPendingMutations = 0;
+let authMutationTail = Promise.resolve();
+let authUiBound = false;
+let ownerModalReturnFocus = null;
+
+function hasOwnerAuthConfig() {
+  const fb = CONFIG.firebase || {};
+  return ['apiKey', 'authDomain', 'projectId', 'appId'].every(key =>
+    typeof fb[key] === 'string' && fb[key].trim() !== ''
+  ) && Array.isArray(CONFIG.ownerUids) && CONFIG.ownerUids.some(uid =>
+    typeof uid === 'string' && uid.trim() !== ''
+  );
+}
+
+function isAllowedOwner(user) {
+  return !!user && typeof user.uid === 'string' &&
+    Array.isArray(CONFIG.ownerUids) && CONFIG.ownerUids.includes(user.uid);
+}
+
+function applyOwnerAuthSession(user) {
+  ownerUser = user;
+  setOwnerSession(user);
+  updateModeUI();
+}
+
+function safeAuthMessage(error) {
+  const code = error && error.code;
+  if (code === 'auth/network-request-failed') return '連線失敗，請檢查網路後再試。';
+  if (code === 'auth/too-many-requests') return '嘗試次數過多，請稍後再試。';
+  if (code === 'auth/operation-not-allowed') return '尚未啟用 Firebase 電子郵件登入。';
+  if (code === 'auth/unauthorized-domain') return '請在 Firebase 加入這個網站的授權網域。';
+  if (code === 'auth/invalid-api-key' || code === 'auth/app-not-authorized') return 'Firebase 設定有誤，請檢查設定。';
+  if (code === 'charger/auth-config-missing') return '尚未設定 Firebase 與屋主 UID，現在使用展示模式。';
+  if (code === 'charger/owner-denied') return '此帳號沒有屋主存取權限。';
+  if (code === 'charger/auth-state-changed') return '登入狀態已變更，請重新登入。';
+  if (code === 'charger/sdk-unavailable') return '登入元件載入失敗，請檢查網路後再試。';
+  return '登入失敗，請確認帳號密碼後再試。';
+}
+
+function ownerAuthError(code) {
+  const error = new Error(code);
+  error.code = code;
+  return error;
+}
+
+function updateAuthBusyUI() {
+  const busy = authPendingMutations > 0 || authSignInPending;
+  ['ownerEmail', 'ownerPassword', 'rememberOwner', 'pinConfirmBtn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = busy;
+  });
+  const form = document.getElementById('authForm');
+  if (form) form.setAttribute('aria-busy', String(busy));
+  setText('pinConfirmBtn', busy ? '處理中…' : '登入');
+}
+
+function queueAuthMutation(action) {
+  authPendingMutations += 1;
+  updateAuthBusyUI();
+  const run = authMutationTail.then(action, action);
+  authMutationTail = run.catch(() => {});
+  return run.finally(() => {
+    authPendingMutations -= 1;
+    updateAuthBusyUI();
+  });
+}
+
+async function ensureFirebaseAuth() {
+  if (!hasOwnerAuthConfig()) throw ownerAuthError('charger/auth-config-missing');
+  if (firebaseAuthReady) return firebaseAuthReady;
+  firebaseAuthReady = (async () => {
+    let firebaseAppApi;
+    let loadedAuthApi;
+    try {
+      [firebaseAppApi, loadedAuthApi] = await Promise.all([
+        import('https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js'),
+        import('https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js')
+      ]);
+    } catch (_) {
+      throw ownerAuthError('charger/sdk-unavailable');
+    }
+    authApi = loadedAuthApi;
+    const appName = 'charger-owner-dashboard';
+    const existingApp = firebaseAppApi.getApps().find(app => app.name === appName);
+    const app = existingApp || firebaseAppApi.initializeApp(CONFIG.firebase, appName);
+    firebaseAuth = authApi.getAuth(app);
+    authApi.onAuthStateChanged(firebaseAuth, user => {
+      // 登入／登出由序列化操作提交，避免舊 callback 覆蓋新的使用者意圖。
+      if (authSuppressed || authPendingMutations > 0) return;
+      if ((user ? user.uid : null) !== (firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : null)) return;
+      if (!user) {
+        applyOwnerAuthSession(null);
+        return;
+      }
+      if (!isAllowedOwner(user)) {
+        authSuppressed = true;
+        applyOwnerAuthSession(null);
+        setText('pinError', safeAuthMessage(ownerAuthError('charger/owner-denied')));
+        void queueAuthMutation(() => authApi.signOut(firebaseAuth)).catch(() => {});
+        return;
+      }
+      applyOwnerAuthSession(user);
+    }, () => {
+      if (authSuppressed || authPendingMutations > 0) return;
+      applyOwnerAuthSession(null);
+      setText('pinError', '無法確認登入狀態，請重新登入。');
+    });
+    return firebaseAuth;
+  })().catch(error => {
+    firebaseAuthReady = null;
+    throw error;
+  });
+  return firebaseAuthReady;
+}
+
+function clearLegacyOwnerAccess() {
+  try {
+    ['charger_owner_auth_v1', 'charger_pin_attempts_v1', 'charger_pin_lock_until_v1'].forEach(key => localStorage.removeItem(key));
+  } catch (_) {}
+  // 保留其他查詢參數與 hash，只移除舊的網址通行碼。
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('key')) {
+      url.searchParams.delete('key');
+      window.history.replaceState(window.history.state, document.title, url.pathname + url.search + url.hash);
+    }
+  } catch (_) {}
+}
+
+async function initAuth() {
+  clearLegacyOwnerAccess();
+  if (!authUiBound) {
+    authUiBound = true;
+    const form = document.getElementById('authForm');
+    if (form) form.addEventListener('submit', verifyPin);
+    const overlay = document.getElementById('pinModalOverlay');
+    if (overlay) {
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+      overlay.addEventListener('keydown', event => {
+        if (!overlay.classList.contains('show')) return;
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closePinModal();
+        } else if (event.key === 'Tab') {
+          const focusable = [...overlay.querySelectorAll('button, input, select, textarea, a[href], [tabindex]')]
+            .filter(el => !el.disabled && el.tabIndex >= 0 && el.getClientRects().length);
+          if (!focusable.length) return;
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (event.shiftKey && (document.activeElement === first || !overlay.contains(document.activeElement))) {
+            event.preventDefault();
+            last.focus();
+          } else if (!event.shiftKey && (document.activeElement === last || !overlay.contains(document.activeElement))) {
+            event.preventDefault();
+            first.focus();
+          }
+        }
+      });
+    }
+  }
+  updateModeUI();
+  if (!hasOwnerAuthConfig()) return;
+  try {
+    await ensureFirebaseAuth();
+  } catch (error) {
+    applyOwnerAuthSession(null);
+    setText('pinError', safeAuthMessage(error));
+  }
+}
+
+function updateModeUI() {
+  const banner = document.getElementById('demoBanner');
+  if (banner) banner.classList.toggle('active', !isOwnerAuthenticated);
+  setText('modeSwitchBtn', isOwnerAuthenticated ? '🎮 切換展示並登出' : '🔐 屋主登入');
+}
+
+function openPinModal() {
+  const overlay = document.getElementById('pinModalOverlay');
+  if (!overlay) return;
+  ownerModalReturnFocus = document.activeElement;
+  setText('pinError', hasOwnerAuthConfig() ? '' : safeAuthMessage(ownerAuthError('charger/auth-config-missing')));
+  const password = document.getElementById('ownerPassword');
+  if (password) password.value = '';
+  overlay.classList.add('show');
+  updateAuthBusyUI();
+  const openingVersion = authIntentVersion;
+  setTimeout(() => {
+    if (openingVersion !== authIntentVersion || !overlay.classList.contains('show')) return;
+    const email = document.getElementById('ownerEmail');
+    const target = email && !email.value ? email : password;
+    if (target && !target.disabled) target.focus();
+  }, 0);
+}
+
+function hideOwnerModal() {
+  const overlay = document.getElementById('pinModalOverlay');
+  if (overlay) overlay.classList.remove('show');
+  const password = document.getElementById('ownerPassword');
+  if (password) password.value = '';
+  if (ownerModalReturnFocus && ownerModalReturnFocus.isConnected && typeof ownerModalReturnFocus.focus === 'function') {
+    ownerModalReturnFocus.focus();
+  }
+  ownerModalReturnFocus = null;
+}
+
+function invalidateOwnerIntent() {
+  authIntentVersion += 1;
+  authSuppressed = true;
+  applyOwnerAuthSession(null);
+}
+
+async function signOutCurrentFirebaseUser() {
+  // 取消可能早於 SDK 載入完成；等待初始化後再清除 Firebase 自己的登入狀態。
+  if (firebaseAuthReady) {
+    try { await firebaseAuthReady; } catch (_) {}
+  }
+  if (firebaseAuth && authApi) await authApi.signOut(firebaseAuth);
+}
+
+function closePinModal() {
+  // 即使 Firebase 的登入 Promise 稍後才完成，也不能重新打開屋主模式。
+  invalidateOwnerIntent();
+  hideOwnerModal();
+  void queueAuthMutation(signOutCurrentFirebaseUser).catch(() => {
+    setText('pinError', '本頁已切換展示；Firebase 登出失敗，請連線後再試。');
+  });
+}
+
+async function verifyPin(event) {
+  if (event) event.preventDefault();
+  if (authSignInPending || authPendingMutations > 0) return;
+  const emailEl = document.getElementById('ownerEmail');
+  const passwordEl = document.getElementById('ownerPassword');
+  const rememberEl = document.getElementById('rememberOwner');
+  const email = emailEl ? emailEl.value.trim() : '';
+  const password = passwordEl ? passwordEl.value : '';
+  if (!email || !password) {
+    setText('pinError', '請輸入電子郵件與密碼。');
+    return;
+  }
+  if (!hasOwnerAuthConfig()) {
+    setText('pinError', safeAuthMessage(ownerAuthError('charger/auth-config-missing')));
+    return;
+  }
+  const remember = !!(rememberEl && rememberEl.checked);
+  const version = ++authIntentVersion;
+  authSuppressed = false;
+  authSignInPending = true;
+  setText('pinError', '');
+  try {
+    await queueAuthMutation(async () => {
+      try {
+        await ensureFirebaseAuth();
+        if (version !== authIntentVersion || authSuppressed) return;
+        await authApi.setPersistence(firebaseAuth, remember ? authApi.browserLocalPersistence : authApi.browserSessionPersistence);
+        if (version !== authIntentVersion || authSuppressed) return;
+        const result = await authApi.signInWithEmailAndPassword(firebaseAuth, email, password);
+        if (version !== authIntentVersion || authSuppressed) {
+          await authApi.signOut(firebaseAuth);
+          return;
+        }
+        // 另一個分頁可能在登入 Promise 完成時登出或切換帳號。
+        if (!firebaseAuth.currentUser || firebaseAuth.currentUser.uid !== result.user.uid) {
+          throw ownerAuthError('charger/auth-state-changed');
+        }
+        if (!isAllowedOwner(result.user)) {
+          authSuppressed = true;
+          applyOwnerAuthSession(null);
+          try { await authApi.signOut(firebaseAuth); } catch (_) {}
+          throw ownerAuthError('charger/owner-denied');
+        }
+        applyOwnerAuthSession(firebaseAuth.currentUser);
+        hideOwnerModal();
+      } catch (error) {
+        if (version === authIntentVersion) {
+          authSuppressed = true;
+          applyOwnerAuthSession(null);
+          setText('pinError', safeAuthMessage(error));
+          if (firebaseAuth && firebaseAuth.currentUser) {
+            try { await authApi.signOut(firebaseAuth); } catch (_) {}
+          }
+        }
+      }
+    });
+  } finally {
+    authSignInPending = false;
+    updateAuthBusyUI();
+  }
+}
+
+async function onFooterModeSwitch() {
+  if (!isOwnerAuthenticated && !ownerUser) {
+    openPinModal();
+    return;
+  }
+  invalidateOwnerIntent();
+  hideOwnerModal();
+  try {
+    await queueAuthMutation(signOutCurrentFirebaseUser);
+  } catch (_) {
+    setText('pinError', '本頁已切換展示；Firebase 登出失敗，請連線後再試。');
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function getOwnerIdToken(forceRefresh = false) {
+  const version = authIntentVersion;
+  const user = firebaseAuth && firebaseAuth.currentUser;
+  if (authSuppressed || !isOwnerAuthenticated ||
+      !ownerUser || !user || user.uid !== ownerUser.uid || !isAllowedOwner(user)) {
+    throw ownerAuthError('charger/owner-denied');
+  }
+  try {
+    const token = await user.getIdToken(forceRefresh);
+    if (version !== authIntentVersion || authSuppressed || !isOwnerAuthenticated ||
+        !firebaseAuth.currentUser || firebaseAuth.currentUser.uid !== user.uid ||
+        !ownerUser || ownerUser.uid !== user.uid || !isAllowedOwner(firebaseAuth.currentUser)) {
+      throw ownerAuthError('charger/owner-denied');
+    }
+    if (typeof token !== 'string' || !token) throw ownerAuthError('charger/owner-denied');
+    return token;
+  } catch (_) {
+    // 不把 SDK 內部錯誤或 token 放進 UI／日誌。
+    throw ownerAuthError('charger/owner-denied');
+  }
+}
+
+
+    // APP_STARTUP
+    setOwnerSession(null);
+    void initAuth();
+    // APP_MAIN_END
   </script>
 </body>
 </html>
