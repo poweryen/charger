@@ -828,7 +828,7 @@
 
     <div class="footer" id="footerBar">
       <span class="pulse" id="syncPulse"></span>
-      <span id="syncStatusText">雲端即時同步中</span> • <span id="updateTime">-</span>
+      <span id="syncStatusText">等待雲端資料</span> • <span id="ocppStatusText">OCPP 尚未確認</span> • 最後同步：<span id="updateTime">-</span>
       <button type="button" class="mode-switch-link" id="modeSwitchBtn" onclick="onFooterModeSwitch()">🔐 屋主登入</button>
     </div>
   </div>
@@ -851,7 +851,7 @@
       realtimeIntervalMs: 3000,
       historyIntervalMs: 30000,
       requestTimeoutMs: 12000,
-      staleAfterMs: 10 * 60 * 1000,
+      staleAfterMs: 6 * 60 * 1000,
       // 舊版資料只提供 rate 時的顯示分類；HA 可用 is_off_peak 布林值覆寫。
       offPeakRateMax: 2.2
     };
@@ -871,8 +871,8 @@
     let historyRequest = null;
     let realtimeTimer = null;
     let historyTimer = null;
-    let dashboardHasData = false;
-    let lastUpdatedAt = null;
+    let lastDashboardData = null;
+    let lastReceivedData = null;
 
     function safeText(value, fallback = '') {
       return typeof value === 'string' || (typeof value === 'number' && Number.isFinite(value))
@@ -967,7 +967,7 @@
       }
       const normalized = { ...data };
       for (const field of ['power', 'current', 'voltage', 'rate', 'session_energy', 'session_cost', 'month_energy', 'month_cost']) {
-        if (data[field] !== undefined && data[field] !== null && !['number', 'string'].includes(typeof data[field])) {
+        if (!['power', 'current', 'voltage'].includes(field) && data[field] !== undefined && data[field] !== null && !['number', 'string'].includes(typeof data[field])) {
           throw new Error(`即時資料 ${field} 欄位格式不正確`);
         }
         normalized[field] = finiteNumber(data[field]);
@@ -986,7 +986,50 @@
       if (data.is_off_peak !== undefined && data.is_off_peak !== null && typeof data.is_off_peak !== 'boolean') {
         throw new Error('即時資料 is_off_peak 欄位須為布林值');
       }
+      // 有效旗標只接受真正的布林值；字串 'false' 不能被當作 true。
+      for (const field of ['power_valid', 'current_valid']) {
+        normalized[field] = typeof data[field] === 'boolean' ? data[field] : null;
+      }
+      normalized.ocpp_connection = typeof data.ocpp_connection === 'string'
+        ? data.ocpp_connection.trim().toLowerCase() : data.ocpp_connection == null ? null : 'unknown';
       return normalized;
+    }
+
+    function getDashboardHealth(data, isDemo = false, readError = '') {
+      const timestamp = parseTimestamp(data.updated_at);
+      const age = timestamp === null ? null : Date.now() - timestamp;
+      let cloudKey = 'fresh';
+      let cloudLabel = '雲端同步正常';
+      if (isDemo) { cloudKey = 'demo'; cloudLabel = '訪客展示模式運行中'; }
+      else if (readError) { cloudKey = 'error'; cloudLabel = `雲端讀取錯誤：${readError}`; }
+      else if (timestamp === null) { cloudKey = 'unknown'; cloudLabel = 'HA 更新時間缺失或格式錯誤'; }
+      else if (age >= CONFIG.staleAfterMs) { cloudKey = 'stale'; cloudLabel = `HA 同步逾時（已 ${Math.floor(age / 60000)} 分鐘未更新）`; }
+      else if (age < -5 * 60000) { cloudKey = 'future'; cloudLabel = 'HA 資料時間超前，請確認時間'; }
+
+      const connection = typeof data.ocpp_connection === 'string' ? data.ocpp_connection.trim().toLowerCase() : null;
+      const ocppKey = isDemo ? 'demo' : connection === 'on' ? 'on' : connection === 'off' ? 'off'
+        : data.ocpp_connection === undefined || data.ocpp_connection === null || connection === '' ? 'missing' : 'unknown';
+      let ocppLabel = isDemo ? 'OCPP 模擬連線' : ocppKey === 'on' ? 'OCPP 已連線'
+        : ocppKey === 'off' ? 'OCPP 已斷線' : ocppKey === 'missing' ? 'OCPP 未知（缺少連線欄位）' : 'OCPP 狀態未知';
+      if (!isDemo && cloudKey !== 'fresh') ocppLabel = `${ocppLabel}（上次資料，非即時）`;
+
+      const rawState = getChargerState(data.status, data.power);
+      const canUseRealtime = (isDemo || (cloudKey === 'fresh' && ocppKey === 'on'))
+        && !['unknown', 'offline'].includes(rawState.key);
+      const power = canUseRealtime && (isDemo || data.power_valid === true) ? finiteNumber(data.power) : null;
+      const current = canUseRealtime && (isDemo || data.current_valid === true) ? finiteNumber(data.current) : null;
+      const animate = canUseRealtime && rawState.charging && power !== null && current !== null && power > 0 && current > 0;
+      let label = rawState.label;
+      if (!isDemo && cloudKey !== 'fresh') label = cloudKey === 'error' ? '⚠️ 雲端讀取錯誤'
+        : cloudKey === 'stale' ? '⚠️ HA 同步逾時' : '⚠️ 資料時間未確認';
+      else if (!isDemo && ocppKey !== 'on') label = ocppKey === 'off' ? '⚠️ 充電樁失聯' : '⚠️ OCPP 連線未知';
+      else if (canUseRealtime && (power === null || current === null)) {
+        label = `${rawState.label}｜${power === null && current === null ? '功率／電流' : power === null ? '功率' : '電流'}計量無效`;
+      }
+      const state = { ...rawState, label, charging: animate, plugged: canUseRealtime && rawState.plugged,
+        error: rawState.error || !canUseRealtime || power === null || current === null };
+      return { cloudKey, cloudLabel, ocppKey, ocppLabel, canUseRealtime, power, current, state, animate,
+        voltage: canUseRealtime && power !== null && current !== null ? finiteNumber(data.voltage) : null };
     }
 
     function getRateInfo(data) {
@@ -1014,28 +1057,25 @@
       }
     }
 
-    function updateSyncHealth(updatedAt, isError = false, isDemo = false, message = '') {
+    function updateSyncHealth(updatedAt, isError = false, isDemo = false, message = '', health = null) {
       const footer = document.getElementById('footerBar');
       const pulse = document.getElementById('syncPulse');
+      health = health || getDashboardHealth({ updated_at: updatedAt }, isDemo, isError ? message || '讀取失敗' : '');
       if (isDemo) {
         footer.className = 'footer';
         pulse.className = 'pulse demo';
         setText('syncStatusText', '訪客展示模式運行中');
+        setText('ocppStatusText', health.ocppLabel);
         setText('updateTime', new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false }));
         return;
       }
       const timestamp = parseTimestamp(updatedAt);
       setText('updateTime', timestamp === null ? '--' : new Date(timestamp).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false }));
-      let stale = isError || timestamp === null;
-      let text = message || (isError ? '⚠️ 讀取失敗' : timestamp === null ? '⚠️ 更新時間缺失或格式錯誤' : '雲端即時同步中');
-      if (!isError && timestamp !== null) {
-        const age = Date.now() - timestamp;
-        if (age >= CONFIG.staleAfterMs) { stale = true; text = `訊號未更新 (已逾 ${Math.floor(age / 60000)} 分鐘)`; }
-        else if (age < -5 * 60000) { stale = true; text = '⚠️ 資料時間超前，請確認 HA 時間'; }
-      }
+      const stale = health.cloudKey !== 'fresh' || health.ocppKey !== 'on';
       footer.className = stale ? 'footer stale' : 'footer';
       pulse.className = stale ? 'pulse stale' : 'pulse';
-      setText('syncStatusText', text);
+      setText('syncStatusText', message || health.cloudLabel);
+      setText('ocppStatusText', health.ocppLabel);
     }
 
     function updateGauge(needleId, valTextId, value, maxVal, unit) {
@@ -1058,19 +1098,20 @@
       }
     }
 
-    function updateEnergyFlow(rate, status, power, vehicleName, tariff = {}) {
-      const state = getChargerState(status, power);
+    function updateEnergyFlow(rate, status, power, vehicleName, tariff = {}, health = null) {
+      const state = health ? health.state : getChargerState(status, power);
       const info = getRateInfo({ ...tariff, rate });
       document.getElementById('flowGridNode').className = info.offPeak === null ? 'flow-node' : `flow-node ${info.offPeak ? 'active-green' : 'active-amber'}`;
       setText('flowGridTitle', info.offPeak === null ? '⚡ 台電電網' : info.offPeak ? '🟢 台電離峰電網' : '🟠 台電尖峰電網');
       setText('flowGridSub', `${formatNumber(info.rate, 2)} 元/度`);
       document.getElementById('flowEvseNode').className = `flow-node${state.error ? ' active-danger' : state.charging ? ' active-green' : state.plugged ? ' active-blue' : ''}`;
-      setText('flowEvseSub', state.charging ? `⚡ 送電 ${formatNumber(power, 2)} kW` : state.key === 'available' ? '待命／未充電' : state.label);
+      setText('flowEvseSub', health && !health.canUseRealtime ? state.label
+        : state.charging ? `⚡ 送電 ${formatNumber(power, 2)} kW` : state.key === 'available' ? '待命／未充電' : state.label);
       const type = getVehicleType(vehicleName);
       const color = type === 'n7' ? '#38bdf8' : type === 'bria' ? '#4ade80' : 'var(--text-sub)';
       document.getElementById('flowCarNode').className = `flow-node${state.charging || state.plugged ? type === 'n7' ? ' active-blue' : type === 'bria' ? ' active-green' : '' : ''}`;
       setText('flowCarTitle', '🚗 車輛');
-      setText('flowCarSub', state.error || state.key === 'unknown' ? '連接狀態未確認'
+      setText('flowCarSub', (health && !health.canUseRealtime) || state.key === 'unknown' ? '連接狀態未確認（非即時）'
         : state.charging || state.plugged ? `${type === 'unknown' ? '🚗' : type === 'n7' ? '🔵' : '🟢'} ${safeText(vehicleName, '未分類車款') || '未分類車款'}` : '🅿️ 未充電待命');
       document.getElementById('flowCarSub').style.color = color;
       document.getElementById('flowLine1').className = state.charging ? 'flow-line charging' : 'flow-line';
@@ -1085,21 +1126,24 @@
       element.replaceChildren(document.createTextNode(label), strong);
     }
 
-    function applyDashboardData(data, isDemo = false) {
-      const power = finiteNumber(data.power);
-      const current = finiteNumber(data.current);
-      const state = getChargerState(data.status, power);
+    function applyDashboardData(data, isDemo = false, readError = '') {
+      const health = getDashboardHealth(data, isDemo, readError);
+      const { power, current, state } = health;
+      const updatedAt = data.updated_at;
+      // 連線未知、逾時或讀取失敗時，只保留已確認的快照，不能用殘留或歸零的累計覆寫。
+      if (!isDemo && health.canUseRealtime) lastDashboardData = { ...data };
+      if (!isDemo && !health.canUseRealtime) data = lastDashboardData || {};
       const badge = document.getElementById('statusBadge');
       badge.textContent = state.label;
       badge.className = `status-badge${state.charging ? ' charging' : state.error ? ' fault' : ''}`;
       const schedule = safeText(data.schedule, '--') || '--';
       setText('scheduleText', schedule);
       updateTouStatus(data.rate, schedule, data);
-      updateEnergyFlow(data.rate, data.status, power, data.vehicle, data);
-      updateTeslaChargingStage(state.charging && getVehicleType(data.vehicle) !== 'unknown', safeText(data.vehicle));
+      updateEnergyFlow(data.rate, data.status, power, data.vehicle, data, health);
+      updateTeslaChargingStage(health.animate && getVehicleType(data.vehicle) !== 'unknown', safeText(data.vehicle));
       updateGauge('needlePower', 'powerVal', power, 4.5, 'kW');
       updateGauge('needleCurrent', 'currentVal', current, 20, 'A');
-      const voltage = finiteNumber(data.voltage);
+      const voltage = health.voltage;
       if (voltage !== null) setDetailLine('voltageSub', '⚡ 即時電壓：', `${formatNumber(voltage, 1)} V`);
       else if (state.charging && power !== null && current !== null && current > 0.5) setDetailLine('voltageSub', '⚡ 估算電壓：', `${formatNumber(power * 1000 / current, 1)} V`);
       else setDetailLine('voltageSub', '⚡ 即時電壓：', '-- V');
@@ -1111,7 +1155,8 @@
       vehicleBadge.className = getVehicleBadgeClass(vehicle);
       vehicleBadge.textContent = vehicle;
       document.getElementById('vehicleName').replaceChildren(vehicleBadge);
-      const rawTime = safeText(data.session_time);
+      const nonRealtime = !isDemo && !health.canUseRealtime;
+      const rawTime = `${safeText(data.session_time, '--') || '--'}${nonRealtime ? '（上次資料，非即時）' : ''}`;
       const time = document.getElementById('sessionTime');
       const divider = rawTime.indexOf(' ~ ');
       if (divider >= 0) {
@@ -1137,7 +1182,7 @@
       const gas = monthKm === null ? null : Math.round(monthKm / 12.5 * 30);
       const savedDc = dc === null || monthCost === null ? null : Math.max(0, Math.round(dc - monthCost));
       const savedGas = gas === null || monthCost === null ? null : Math.max(0, Math.round(gas - monthCost));
-      setText('sessionDuration', safeText(data.session_duration, '--') || '--');
+      setText('sessionDuration', `${safeText(data.session_duration, '--') || '--'}${nonRealtime ? '（上次資料，非即時）' : ''}`);
       setText('sessionEnergy', `${formatNumber(energy, 2)} kWh`);
       setText('sessionKm', sessionKm === null ? '-- km' : `約 +${sessionKm} km`);
       setText('rateVal', `${formatNumber(data.rate, 2)} 元/度`);
@@ -1151,7 +1196,7 @@
       setText('gasCost', `約 NT$ ${formatNumber(gas, 0)} 元`);
       setText('savedDcMoney', `⚡ 淨省 NT$ ${formatNumber(savedDc, 0)} 元`);
       setText('savedMoney', `💰 淨省 NT$ ${formatNumber(savedGas, 0)} 元`);
-      updateSyncHealth(data.updated_at, false, isDemo);
+      updateSyncHealth(updatedAt, !!readError, isDemo, '', health);
     }
 
     function requestIsCurrent(request) {
@@ -1225,18 +1270,10 @@
           if (!requestIsCurrent(request)) return;
           const data = normalizeDashboardPayload(raw);
           applyDashboardData(data, false);
-          dashboardHasData = true;
-          lastUpdatedAt = data.updated_at;
+          lastReceivedData = { ...data };
         } catch (error) {
           if (!requestIsCurrent(request)) return;
-          if (!dashboardHasData) applyDashboardData({}, false);
-          updateTeslaChargingStage(false, '');
-          document.getElementById('flowLine1').className = 'flow-line';
-          document.getElementById('flowLine2').className = 'flow-line';
-          setText('flowEvseSub', dashboardHasData ? '⚠️ 目前顯示上次資料' : '⚠️ 尚無可用資料');
-          setText('statusBadge', '⚠️ 資料未更新');
-          document.getElementById('statusBadge').className = 'status-badge fault';
-          updateSyncHealth(lastUpdatedAt, true, false, `⚠️ ${describeReadError(error)}${dashboardHasData ? '（顯示上次成功資料）' : ''}`);
+          applyDashboardData(lastReceivedData || {}, false, describeReadError(error));
         } finally {
           if (realtimeRequest === request) realtimeRequest = null;
           scheduleNext('realtime', generation);
@@ -1291,8 +1328,8 @@
       clearTimeout(historyTimer);
       isOwnerAuthenticated = !!user && CONFIG.ownerUids.includes(user.uid);
       activeOwnerUid = isOwnerAuthenticated ? user.uid : '';
-      dashboardHasData = false;
-      lastUpdatedAt = null;
+      lastDashboardData = null;
+      lastReceivedData = null;
       allHistoryRecords = [];
       isHistoryExpanded = false;
       document.getElementById('monthFilter').value = 'all';
